@@ -1,30 +1,32 @@
 <script setup>
-
 const props = defineProps({
   message: {
     type: Object,
     required: true,
+    validator(value) {
+      return (
+        ["user", "assistant"].includes(value.role) && typeof value.content === "string"
+      );
+    },
   },
 });
-
-// Initialisation de MarkdownIt pour la conversion Markdown
 </script>
+
+
 
 <template>
   <div class="flex mb-4">
     <!-- Message utilisateur : Aligné à droite -->
-    <div
-      v-if="message.role === 'user'"
-      class="bg-gray-700 text-white px-4 py-2 rounded-lg ml-auto"
-    >
+    <div v-if="message.role === 'user'" class="bg-gray-700 text-white px-4 py-2 rounded-lg ml-auto"
+      aria-label="Message utilisateur">
       {{ message.content }}
     </div>
 
-    <!-- Message IA : Aligné à gauche et rendu en Markdown -->
-    <div
-    v-else-if="message.role === 'assistant'"
-    class="bg-gray-800 text-gray-300 px-4 py-2 rounded-lg mr-auto prose prose-invert"
-    v-html="message.content"
-    ></div>
+    <!-- Message IA : Aligné à gauche et rendu en Markdown avec surlignage syntaxique -->
+    <div v-else-if="message.role === 'assistant'"
+      class="bg-gray-800 text-gray-300 px-4 py-2 rounded-lg mr-auto prose prose-invert" v-html="message.content"
+      aria-label="Message assistant"></div>
   </div>
 </template>
+
+
