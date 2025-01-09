@@ -85,17 +85,19 @@ const handleScroll = (event) => {
 
 <template>
   <div class="flex flex-col h-screen bg-gray-900 text-white">
+
     <!-- Zone défilable avec scrollbar -->
     <div ref="chatContainer"
       class="scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent h-full overflow-y-auto"
       @scroll="handleScroll">
-      <!-- Titre et Select -->
+
       <!-- Titre et Select -->
       <header class="flex justify-between items-center py-4 px-6 bg-gray-800 shadow z-10">
         <h1 class="text-xl font-bold text-white">AI Nexus</h1>
 
         <!-- Conteneur avec Select et Flèche -->
         <div class="relative">
+
           <!-- Select avec transition de disparition -->
           <select v-if="!isScrolled" v-model="form.model"
             class="transition-all duration-500 ease-in-out opacity-100 scale-100 transform bg-gray-700 text-white rounded-lg px-4 py-2 border-none focus:outline-none focus:ring focus:ring-indigo-300"
@@ -117,23 +119,23 @@ const handleScroll = (event) => {
 
       <!-- Zone de discussion -->
       <div v-if="showChat"
-        class="w-full max-w-4xl flex-grow px-4 py-6 mx-auto bg-gray-900 rounded-lg flex flex-col space-y-4">
+        class="w-full max-w-2xl flex-grow px-4 py-6 mx-auto bg-gray-900 rounded-lg flex flex-col space-y-4">
         <ChatMessage v-for="(message, index) in messages" :key="index" :message="message" />
       </div>
     </div>
 
     <!-- Champ d'entrée -->
     <div :class="showChat
-      ? 'bottom-0 w-full px-4 pb-4 flex items-center justify-center bg-gray-900'
+      ? 'bottom-0 px-4 pb-4 flex items-center justify-center bg-gray-900'
       : 'flex items-center justify-center flex-grow absolute top-1/2 w-full bg-gray-900'">
-      <form @submit.prevent="submitForm" class="w-full max-w-4xl">
+      <form @submit.prevent="submitForm" class="w-full max-w-2xl">
         <div class="flex items-center space-x-3 bg-gray-700 rounded-full px-6 py-3">
           <!-- Champ de saisie -->
           <input v-model="form.message" placeholder="Message AI Nexus..."
-            class="flex-grow bg-gray-700 text-white border-none focus:outline-none focus:ring-0 placeholder-gray-400 placeholder-opacity-75 px-4 py-2 rounded-full" />
+            class="flex-grow bg-gray-700 text-white border-none focus:outline-none focus:ring-0 placeholder-gray-400 placeholder-opacity-75 px-4 py-1 rounded-full" />
           <!-- Bouton d'envoi -->
           <button type="submit"
-            class="bg-blue-500 text-white p-3 rounded-full shadow hover:bg-blue-600 focus:outline-none disabled:bg-blue-300"
+            class="bg-blue-500 text-white p-2 rounded-full shadow hover:bg-blue-600 focus:outline-none disabled:bg-blue-300"
             :disabled="isLoading">
             <template v-if="!isLoading">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
