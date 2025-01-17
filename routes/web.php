@@ -31,6 +31,7 @@ Route::middleware([
   // Routes pour ConversationController
   Route::get('/conversations', [ConversationController::class, 'index'])->name('conversations.index');
   Route::post('/conversations', [ConversationController::class, 'store'])->name('conversations.store');
+  Route::put('/conversations/{id}/model', [ConversationController::class, 'updateModel'])->name('conversations.updateModel');
 
   // Routes pour MessageController
   Route::post('/conversations/{id}/messages', [MessageController::class, 'store'])->name('messages.store');

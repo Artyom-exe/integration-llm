@@ -25,6 +25,22 @@ class ConversationController extends Controller
     return response()->json(['conversation' => $conversation], 201);
   }
 
+  // Met à jour le modèle d'une conversation
+  public function updateModel(Request $request, $id)
+  {
+    $request->validate([
+      'model' => 'required|string',
+    ]);
+
+    $conversation = Conversation::where('id', $id)
+      ->where('user_id', auth()->id())
+      ->firstOrFail();
+
+    $conversation->update(['model' => $request->model]);
+
+    return response()->json(['conversation' => $conversation], 200);
+  }
+
   // Supprime une conversation
   public function destroy($id)
   {
