@@ -64,7 +64,11 @@ const selectConversation = (conversationId) => {
   );
 
   if (selectedConversation) {
-    messages.value = selectedConversation.messages || [];
+    messages.value = (selectedConversation.messages || []).map(message => ({
+      ...message,
+      content: message.role === 'assistant' ? md.render(message.content) : message.content
+    })); // Utiliser une copie des messages avec le rendu MarkdownIt
+
     form.model = selectedConversation.model; // Mettre à jour le modèle d'IA
     nextTick(scrollToBottom);
   }
@@ -84,7 +88,10 @@ const createNewConversation = async () => {
     });
 
     const data = response.data;
-    conversations.value.unshift(data.conversation);
+    conversations.value.unshift({
+      ...data.conversation,
+      messages: [] // Initialiser les messages pour éviter l'erreur
+    });
     selectConversation(data.conversation.id);
   } catch (error) {
     console.error("Erreur lors de la création de la conversation", error);
@@ -121,7 +128,7 @@ const sendMessage = async () => {
     console.error("Erreur lors de l'envoi du message", error);
   } finally {
     isLoading.value = false;
-    form.message = "";
+    form.message = ""; // Effacer le champ d'entrée après l'envoi du message
   }
 };
 
@@ -134,6 +141,7 @@ const submitForm = () => {
   } else {
     sendMessage();
   }
+  form.message = ""; // Effacer le champ d'entrée après l'envoi du message
 };
 
 // Faire défiler jusqu'en bas
@@ -145,23 +153,39 @@ const scrollToBottom = () => {
     });
   }
 };
+
+// Mettre à jour le modèle d'IA pour une conversation
+const updateModel = async (conversationId, model) => {
+  try {
+    await axios.put(`/conversations/${conversationId}/model`, {
+      model: model,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du modèle", error);
+  }
+};
+
+// Surveiller les changements de modèle
+watch(() => form.model, (newModel) => {
+  if (activeConversationId.value) {
+    updateModel(activeConversationId.value, newModel);
+  }
+});
+
+function adjustHeight(event) {
+  const textarea = event.target;
+  textarea.style.height = '40px'; // Hauteur par défaut.
+  textarea.style.height = `${textarea.scrollHeight}px`; // Ajustement dynamique.
+}
+
+
 </script>
 
 <template>
+
   <div class="flex h-screen bg-gray-900 text-white">
     <!-- Sidebar -->
-    <aside class="w-1/4 bg-gray-800 border-r border-gray-700 flex flex-col">
-      <div class="p-4 flex items-center justify-between">
-        <h1 class="text-lg font-bold">AI Nexus</h1>
-        <select
-          v-model="form.model"
-          class="bg-gray-600 text-white rounded-lg px-2 py-1 border-none focus:ring focus:ring-blue-500"
-        >
-          <option v-for="model in models" :key="model.id" :value="model.id">
-            {{ model.name }}
-          </option>
-        </select>
-      </div>
+    <aside class=" min-w-60 max-w-60 bg-gray-800 border-r border-gray-700 flex flex-col">
 
       <!-- Recherche -->
       <div class="p-4">
@@ -169,56 +193,74 @@ const scrollToBottom = () => {
           v-model="searchQuery"
           type="text"
           placeholder="Rechercher une conversation..."
-          class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring focus:ring-blue-500"
+          class="w-full bg-gray-700 text-center mb-2 text-white text-xs rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-0 border-none"
         />
+        <button
+          @click="createNewConversation"
+          class="w-full text-xs  bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition"
+        >
+          Nouvelle Conversation
+        </button>
       </div>
 
       <!-- Liste des conversations -->
-      <ul class="flex-grow overflow-y-auto">
+      <ul class="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
         <li
           v-for="conversation in filteredConversations"
           :key="conversation.id"
           :class="[ 'px-4 py-3 cursor-pointer hover:bg-gray-700', activeConversationId === conversation.id ? 'bg-gray-700' : '' ]"
           @click="selectConversation(conversation.id)"
         >
-          <h3 class="font-semibold text-white">{{ conversation.title || "Nouvelle conversation" }}</h3>
-          <p class="text-sm text-gray-400">
+          <h3 class="text-white text-sm text">{{ conversation.title || "Nouvelle conversation" }}</h3>
+          <p class="text-xs text-gray-400">
             {{ new Date(conversation.updated_at).toLocaleString() }}
           </p>
         </li>
       </ul>
-
-      <div class="p-4">
-        <button
-          @click="createNewConversation"
-          class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition"
-        >
-          Nouvelle Conversation
-        </button>
-      </div>
     </aside>
 
     <!-- Chat -->
     <div class="flex flex-col flex-grow">
-      <div ref="chatContainer" class="flex-grow overflow-y-auto p-6 bg-gray-900">
+
+    <header class="bg-gray-900 p-4 flex items-center justify-between">
+      <select
+        v-model="form.model"
+        class="bg-gray-900 text-white text-sm rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800"
+      >
+        <option v-for="model in models" :key="model.id" :value="model.id" class="text-xs">
+          {{ model.name }}
+        </option>
+      </select>
+    </header>
+
+      <div ref="chatContainer" class="flex-grow overflow-y-auto p-6 flex flex-col items-center bg-gray-900 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
         <ChatMessage v-for="(message, index) in messages" :key="index" :message="message" />
       </div>
 
-      <div class="p-4 bg-gray-800">
-        <form @submit.prevent="submitForm" class="flex items-center space-x-4">
-          <input
-            v-model="form.message"
-            placeholder="Message AI Nexus..."
-            class="flex-grow bg-gray-700 text-white border-none focus:outline-none px-4 py-2 rounded-lg"
-          />
-          <button
-            type="submit"
-            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
-            :disabled="isLoading"
-          >
-            <span v-if="!isLoading">Envoyer</span>
-            <span v-else>Chargement...</span>
-          </button>
+
+      <div class="p-6 pt-0 bg-gray-900 justify-center flex">
+        <form @submit.prevent="submitForm" class="flex items-center space-x-4 w-full justify-center">
+          <div class="w-3/6 bg-gray-700 rounded-3xl">
+            <textarea
+              v-model="form.message"
+              placeholder="Message AI Nexus..."
+              class="bg-gray-700 text-white border-none pt-3 pl-3 pb-0 rounded-t-3xl w-full text-sm focus:outline-none focus:ring-0 resize-none scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 max-h-[200px] h-[40px]"
+              @input="adjustHeight($event)"
+              @keydown.enter.prevent="submitForm"
+              >
+
+          </textarea>
+            <div class="bg-gray-700 text-white rounded-b-3xl flex justify-end px-2 py-2">
+              <button
+                type="submit"
+                class="bg-blue-500 text-white px-4 py-2 hover:bg-blue-600 transition rounded-full w-8 h-8"
+                :disabled="isLoading"
+                >
+                <span v-if="!isLoading"></span>
+                <span v-else>Chargement...</span>
+              </button>
+            </div>
+          </div>
         </form>
       </div>
     </div>

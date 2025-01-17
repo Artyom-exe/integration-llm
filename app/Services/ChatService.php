@@ -18,15 +18,6 @@ class ChatService
     $this->client = $this->createOpenAIClient();
   }
 
-  /**
-   * @return array<array-key, array{
-   *     id: string,
-   *     name: string,
-   *     context_length: int,
-   *     max_completion_tokens: int,
-   *     pricing: array{prompt: int, completion: int}
-   * }>
-   */
   public function getModels(): array
   {
     return cache()->remember('openai.models', now()->addHour(), function () {
@@ -53,13 +44,6 @@ class ChatService
     });
   }
 
-  /**
-   * @param array{role: 'user'|'assistant'|'system'|'function', content: string} $messages
-   * @param string|null $model
-   * @param float $temperature
-   *
-   * @return string
-   */
   public function sendMessage(array $messages, string $model = null, float $temperature = 0.7): string
   {
     try {
@@ -106,9 +90,6 @@ class ChatService
       ->make();
   }
 
-  /**
-   * @return array{role: 'system', content: string}
-   */
   private function getChatSystemPrompt(): array
   {
     $user = auth()->user();
