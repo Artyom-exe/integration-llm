@@ -39,7 +39,7 @@ class MessageController extends Controller
       'content' => $responseContent,
     ]);
 
-    if ($conversation->title === 'Nouvelle conversation') {
+    if ($conversation->title === 'Nouvelle conversation' || $conversation->title === 'Clarification request') {
       $chatService = new ChatService();
       $title = $chatService->generateTitle($request->message);
       $conversation->update(['title' => $title]);

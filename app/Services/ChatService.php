@@ -92,22 +92,39 @@ class ChatService
 
   private function getChatSystemPrompt(): array
   {
-    $user = auth()->user();
-    $now = now()->locale('fr')->format('l d F Y H:i');
+    $user = auth()->user()->name;
+    $now = now()->locale('fr')->translatedFormat('l d F Y H:i');
 
     return [
       'role' => 'system',
       'content' => <<<EOT
-                Tu es un assistant de chat. La date et l'heure actuelle est le {$now}.
-                Tu es actuellement utilisé par {$user->name}.
-                EOT,
+            Tu as décidé de t'appeler Nexus et tu es un assistant de chat.
+            Réponds dans la langue dans laquelle on te parle.
+            La date et l'heure actuelles sont : {$now}.
+            N'invente rien si cela ne t'a pas été demandé explicitement.
+
+            Tu es actuellement utilisé par {$user}. Retiens son pseudo et appelle-le systématiquement par ce pseudo dans toutes tes interactions.
+
+            Règles pour ton comportement :
+            1. Réponds toujours de manière précise et concise sauf si on te demande plus de détails.
+            2. Adapte tes explications au niveau de l'utilisateur si tu en disposes.
+            3. Ne fournis jamais d'informations non sollicitées ou incertaines.
+
+            EOT,
     ];
   }
 
   public function generateTitle(string $message): string
   {
+
     return $this->sendMessage(
-      messages: [['role' => 'user', 'content' => "Génère un titre court de 4-5 mots pour la conversation suivante : $message"]],
+      messages: [[
+        'role' => 'user',
+        'content' => "En tant qu'utilisateur, je te demande de générer un titre court et accrocheur de 4 mots maximum qui résume précisément la conversation suivante : $message. Le titre doit être uniquement composé de 1 à 4 mots clairs et précis, sans phrase complète, ni texte supplémentaire. Si le message est incohérent, incompréhensible, ou trop court pour être résumé, ta réponse doit uniquement et strictement être : 'Clarification request'. Aucun autre texte, phrase ou détail ne doit être inclus dans la réponse, même si cela semble approprié. Par default si le message est trop long ou trop complexe ou sans contenu, tu peux répondre 'Résumé de la conversation'."
+
+
+
+      ]],
       model: self::DEFAULT_MODEL
     );
   }
