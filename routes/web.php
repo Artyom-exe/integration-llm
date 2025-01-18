@@ -35,4 +35,5 @@ Route::middleware([
 
   // Routes pour MessageController
   Route::post('/conversations/{id}/messages', [MessageController::class, 'store'])->name('messages.store');
+  Route::post('/conversations/{conversation}/stream', [MessageController::class, 'streamMessage'])->name('messages.stream');
 });

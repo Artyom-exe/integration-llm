@@ -44,6 +44,37 @@ class ChatService
     });
   }
 
+  public function streamConversation(array $messages, ?string $model = null, float $temperature = 0.7)
+  {
+    try {
+      logger()->info('Début streamConversation', [
+        'model' => $model,
+        'temperature' => $temperature,
+      ]);
+
+      $models = collect($this->getModels());
+      if (!$model || !$models->contains('id', $model)) {
+        $model = self::DEFAULT_MODEL;
+        logger()->info('Modèle par défaut utilisé:', ['model' => $model]);
+      }
+
+      $messages = [$this->getChatSystemPrompt(), ...$messages];
+
+      // Méthode "createStreamed" qui renvoie un flux "StreamResponse"
+      return $this->client->chat()->createStreamed([
+        'model' => $model,
+        'messages' => $messages,
+        'temperature' => $temperature,
+      ]);
+    } catch (\Exception $e) {
+      logger()->error('Erreur dans streamConversation:', [
+        'message' => $e->getMessage(),
+        'trace' => $e->getTraceAsString(),
+      ]);
+      throw $e;
+    }
+  }
+
   public function sendMessage(array $messages, string $model = null, float $temperature = 0.7): string
   {
     try {
