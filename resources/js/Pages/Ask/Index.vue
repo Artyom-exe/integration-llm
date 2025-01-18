@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick } from "vue";
+import { ref, watch, nextTick, onMounted } from "vue";
 import { useForm } from "@inertiajs/vue3";
 import ChatMessage from "@/Components/ChatMessage.vue";
 import MarkdownIt from "markdown-it";
@@ -41,6 +41,7 @@ const chatContainer = ref(null);
 const searchQuery = ref("");
 const filteredConversations = ref([]);
 const isLoading = ref(false);
+const channelSubscription = ref(null);
 
 // Filtrer les conversations en fonction de la recherche
 const filterConversations = (query) => {
@@ -58,7 +59,6 @@ watch(searchQuery, (newQuery) => {
 // Sélectionner une conversation
 const selectConversation = (conversationId) => {
   activeConversationId.value = conversationId;
-
   const selectedConversation = conversations.value.find(
     (conv) => conv.id === conversationId
   );
@@ -67,17 +67,97 @@ const selectConversation = (conversationId) => {
     messages.value = (selectedConversation.messages || []).map(message => ({
       ...message,
       content: message.role === 'assistant' ? md.render(message.content) : message.content
-    })); // Utiliser une copie des messages avec le rendu MarkdownIt
+    }));
 
-    form.model = selectedConversation.model; // Mettre à jour le modèle d'IA
+    form.model = selectedConversation.model;
+    setupWebSocket(conversationId);
     nextTick(scrollToBottom);
   }
 };
 
+// Configuration du WebSocket pour le streaming
+const setupWebSocket = (conversationId) => {
+  if (channelSubscription.value) {
+    channelSubscription.value.unsubscribe();
+  }
+
+  const channel = `chat.${conversationId}`;
+  let currentText = '';
+  let typingTimeout;
+
+  const typeText = (text, index = 0) => {
+    if (index <= text.length) {
+      const lastMessage = messages.value[messages.value.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        // Afficher progressivement le texte
+        lastMessage.content = md.render(text.slice(0, index));
+
+        // Scroll automatique
+        chatContainer.value?.scrollTo({
+          top: chatContainer.value.scrollHeight,
+          behavior: 'auto'
+        });
+
+        // Programmer le prochain caractère
+        typingTimeout = setTimeout(() => {
+          typeText(text, index + 1);
+        }, 10); // Ajustez cette valeur pour la vitesse de frappe
+      }
+    }
+  };
+
+  channelSubscription.value = window.Echo.private(channel)
+    .subscribed(() => console.log("✅ Connecté au canal:", channel))
+    .error(error => console.error("❌ Erreur:", error))
+    .listen(".message.streamed", (event) => {
+      if (event.error) {
+        messages.value.pop();
+        isLoading.value = false;
+        return;
+      }
+
+      // Effacer le timeout précédent si existe
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+
+      if (!event.isComplete) {
+        currentText += event.content;
+        typeText(currentText);
+      } else {
+        // Message final
+        currentText = event.content;
+        typeText(currentText);
+        isLoading.value = false;
+
+        // Mise à jour de la conversation
+        const conversation = conversations.value.find(c => c.id === activeConversationId.value);
+        if (conversation?.messages) {
+          const existingMessage = conversation.messages.find(m => m.content === '');
+          if (existingMessage) {
+            existingMessage.content = event.content;
+          } else {
+            conversation.messages.push({
+              role: 'assistant',
+              content: event.content
+            });
+          }
+        }
+      }
+    });
+};
+
 // Ajouter un message
 const addMessage = (role, content) => {
-  messages.value.push({ role, content });
-  nextTick(scrollToBottom);
+  const message = { role, content };
+  messages.value.push(message);
+  nextTick(() => {
+    chatContainer.value?.scrollTo({
+      top: chatContainer.value.scrollHeight,
+      behavior: 'smooth'
+    });
+  });
+  return message;
 };
 
 // Créer une nouvelle conversation
@@ -98,37 +178,29 @@ const createNewConversation = async () => {
   }
 };
 
+onMounted(() => {
+  if (props.conversations && props.conversations.length) {
+    selectConversation(props.conversations[0].id);
+  }
+});
+
 // Envoyer un message
 const sendMessage = async () => {
   addMessage("user", form.message);
+  addMessage("assistant", ""); // Message vide qui sera mis à jour par le stream
   isLoading.value = true;
 
   try {
-    const response = await axios.post(`/conversations/${activeConversationId.value}/messages`, {
+    await axios.post(`/conversations/${activeConversationId.value}/messages`, {
       message: form.message,
+      model: form.model,
     });
-
-    const data = response.data;
-    addMessage("assistant", md.render(data.message.content));
-
-    const conversation = conversations.value.find(
-      (conv) => conv.id === activeConversationId.value
-    );
-    if (conversation) {
-      if (!Array.isArray(conversation.messages)) {
-        conversation.messages = [];
-      }
-      conversation.messages.push(data.message);
-      if (conversation.title === 'Nouvelle conversation') {
-        conversation.title = data.message.content.substring(0, 20) + "...";
-      }
-    }
+    form.message = "";
   } catch (error) {
+    messages.value.pop();
     addMessage("assistant", "Une erreur est survenue. Veuillez réessayer.");
     console.error("Erreur lors de l'envoi du message", error);
-  } finally {
     isLoading.value = false;
-    form.message = ""; // Effacer le champ d'entrée après l'envoi du message
   }
 };
 
