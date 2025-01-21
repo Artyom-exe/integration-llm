@@ -123,25 +123,34 @@ class ChatService
 
   private function getChatSystemPrompt(): array
   {
-    $user = auth()->user()->name;
+    $user = auth()->user();
     $now = now()->locale('fr')->translatedFormat('l d F Y H:i');
+
+    // Récupérer toutes les instructions système de l'utilisateur
+    $systemInstructions = $user->customInstructions()
+      ->where('category', 'system')
+      ->get()
+      ->pluck('content')
+      ->join("\n");
+
+    $basePrompt = "Tu as décidé de t'appeler Nexus et tu es un assistant de chat.\n";
+    $basePrompt .= "Réponds dans la langue dans laquelle on te parle.\n";
+    $basePrompt .= "La date et l'heure actuelles sont : {$now}.\n";
+    $basePrompt .= "Tu es actuellement utilisé par {$user->name}.\n\n";
+
+    // Ajouter les instructions système personnalisées
+    if ($systemInstructions) {
+      $basePrompt .= "Instructions personnalisées:\n{$systemInstructions}\n\n";
+    }
+
+    $basePrompt .= "Règles pour ton comportement:\n";
+    $basePrompt .= "1. Réponds toujours de manière précise et concise sauf si on te demande plus de détails.\n";
+    $basePrompt .= "2. Adapte tes explications au niveau de l'utilisateur si tu en disposes.\n";
+    $basePrompt .= "3. Ne fournis jamais d'informations non sollicitées ou incertaines.\n";
 
     return [
       'role' => 'system',
-      'content' => <<<EOT
-            Tu as décidé de t'appeler Nexus et tu es un assistant de chat.
-            Réponds dans la langue dans laquelle on te parle.
-            La date et l'heure actuelles sont : {$now}.
-            N'invente rien si cela ne t'a pas été demandé explicitement.
-
-            Tu es actuellement utilisé par {$user}. Retiens son pseudo et appelle-le systématiquement par ce pseudo dans toutes tes interactions.
-
-            Règles pour ton comportement :
-            1. Réponds toujours de manière précise et concise sauf si on te demande plus de détails.
-            2. Adapte tes explications au niveau de l'utilisateur si tu en disposes.
-            3. Ne fournis jamais d'informations non sollicitées ou incertaines.
-
-            EOT,
+      'content' => $basePrompt
     ];
   }
 

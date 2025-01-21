@@ -36,4 +36,9 @@ Route::middleware([
   // Routes pour MessageController
   Route::post('/conversations/{id}/messages', [MessageController::class, 'store'])->name('messages.store');
   Route::post('/conversations/{conversation}/stream', [MessageController::class, 'streamMessage'])->name('messages.stream');
+
+  // Routes pour CustomInstructionController
+  Route::get('/custom-instructions', [CustomInstructionController::class, 'index'])->name('custom-instructions.index');
+  Route::post('/custom-instructions', [CustomInstructionController::class, 'store'])->name('custom-instructions.store');
+  Route::put('/custom-instructions/{id}', [CustomInstructionController::class, 'update'])->name('custom-instructions.update');
 });
