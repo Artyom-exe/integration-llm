@@ -88,28 +88,6 @@ const setupWebSocket = (conversationId) => {
 
   const channel = `chat.${conversationId}`;
   let currentText = '';
-  let typingTimeout;
-
-  const typeText = (text, index = 0) => {
-    if (index <= text.length) {
-      const lastMessage = messages.value[messages.value.length - 1];
-      if (lastMessage && lastMessage.role === 'assistant') {
-        // Afficher progressivement le texte
-        lastMessage.content = md.render(text.slice(0, index));
-
-        // Scroll automatique
-        chatContainer.value?.scrollTo({
-          top: chatContainer.value.scrollHeight,
-          behavior: 'auto'
-        });
-
-        // Programmer le prochain caractère
-        typingTimeout = setTimeout(() => {
-          typeText(text, index + 1);
-        }, 1); // Ajustez cette valeur pour la vitesse de frappe
-      }
-    }
-  };
 
   channelSubscription.value = window.Echo.private(channel)
     .subscribed(() => console.log("✅ Connecté au canal:", channel))
@@ -126,37 +104,46 @@ const setupWebSocket = (conversationId) => {
         const conversation = conversations.value.find(c => c.id === activeConversationId.value);
         if (conversation) {
           conversation.title = event.content;
-          // Mettre à jour les conversations filtrées
           filteredConversations.value = filterConversations(searchQuery.value);
         }
         return;
       }
 
-      // Effacer le timeout précédent si existe
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
-      }
+      const lastMessage = messages.value[messages.value.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        if (!event.isComplete) {
+          // Accumuler le texte
+          currentText += event.content;
+        } else {
+          // Message final
+          currentText = event.content;
+        }
 
-      if (!event.isComplete) {
-        currentText += event.content;
-        typeText(currentText);
-      } else {
-        // Message final
-        currentText = event.content;
-        typeText(currentText);
-        isLoading.value = false;
+        // Mettre à jour le contenu avec le rendu Markdown
+        lastMessage.content = md.render(currentText);
 
-        // Mise à jour de la conversation
-        const conversation = conversations.value.find(c => c.id === activeConversationId.value);
-        if (conversation?.messages) {
-          const existingMessage = conversation.messages.find(m => m.content === '');
-          if (existingMessage) {
-            existingMessage.content = event.content;
-          } else {
-            conversation.messages.push({
-              role: 'assistant',
-              content: event.content
-            });
+        // Scroll automatique
+        nextTick(() => {
+          chatContainer.value?.scrollTo({
+            top: chatContainer.value.scrollHeight,
+            behavior: 'auto'
+          });
+        });
+
+        if (event.isComplete) {
+          isLoading.value = false;
+          // Mise à jour de la conversation
+          const conversation = conversations.value.find(c => c.id === activeConversationId.value);
+          if (conversation?.messages) {
+            const existingMessage = conversation.messages.find(m => m.content === '');
+            if (existingMessage) {
+              existingMessage.content = currentText;
+            } else {
+              conversation.messages.push({
+                role: 'assistant',
+                content: currentText
+              });
+            }
           }
         }
       }
