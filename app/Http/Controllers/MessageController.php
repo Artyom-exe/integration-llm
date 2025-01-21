@@ -7,6 +7,7 @@ use App\Models\Message;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
 use App\Events\ChatMessageStreamed;
+use App\Models\CustomInstruction;
 
 class MessageController extends Controller
 {
@@ -16,6 +17,7 @@ class MessageController extends Controller
     $request->validate([
       'message' => 'required|string',
       'model'   => 'nullable|string',
+      'custom_instruction_id' => 'nullable|exists:custom_instructions,id'
     ]);
 
     try {
@@ -31,7 +33,7 @@ class MessageController extends Controller
       // 2. Nom du canal
       $channelName = "chat.{$conversation->id}";
 
-      // 3. Récupérer historique
+      // 3. Récupérer historique et ajouter les instructions personnalisées si spécifiées
       $messages = $conversation->messages()
         ->orderBy('created_at', 'asc')
         ->get()
@@ -41,8 +43,17 @@ class MessageController extends Controller
         ])
         ->toArray();
 
+      if ($request->has('custom_instruction_id')) {
+        $customInstruction = CustomInstruction::findOrFail($request->custom_instruction_id);
+        array_unshift($messages, [
+          'role' => 'system',
+          'content' => $customInstruction->content
+        ]);
+      }
+
       // 4. Obtenir un flux depuis le ChatService
-      $stream = (new ChatService())->streamConversation(
+      $chatService = new ChatService();
+      $stream = $chatService->streamConversation(
         messages: $messages,
         model: $conversation->model ?? $request->user()->last_used_model ?? ChatService::DEFAULT_MODEL,
       );

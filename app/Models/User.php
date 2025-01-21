@@ -63,4 +63,12 @@ class User extends Authenticatable
   {
     return $this->hasMany(Conversation::class);
   }
+
+  /**
+   * Get the custom instructions for the user.
+   */
+  public function customInstructions()
+  {
+    return $this->hasMany(CustomInstruction::class);
+  }
 }
