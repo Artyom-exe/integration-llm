@@ -9,8 +9,9 @@ class CustomInstructionController extends Controller
 {
   public function index()
   {
-    $instructions = CustomInstruction::all();
-    return response()->json($instructions);
+    return CustomInstruction::where('user_id', auth()->id())
+      ->orderBy('priority', 'desc')
+      ->get();
   }
 
   public function store(Request $request)
@@ -18,37 +19,43 @@ class CustomInstructionController extends Controller
     $validated = $request->validate([
       'title' => 'required|string|max:255',
       'content' => 'required|string',
-      'category' => 'required|string|max:100',
+      'type' => 'required|in:general,tone,format,command',
+      'priority' => 'required|integer|min:0',
+      'is_active' => 'required|boolean',
     ]);
 
-    $instruction = CustomInstruction::create($validated);
-    return response()->json($instruction, 201);
-  }
+    $instruction = CustomInstruction::create([
+      ...$validated,
+      'user_id' => auth()->id(),
+    ]);
 
-  public function show($id)
-  {
-    $instruction = CustomInstruction::findOrFail($id);
-    return response()->json($instruction);
+    return response()->json($instruction, 201);
   }
 
   public function update(Request $request, $id)
   {
-    $instruction = CustomInstruction::findOrFail($id);
+    $customInstruction = CustomInstruction::where('user_id', auth()->id())
+      ->findOrFail($id);
 
     $validated = $request->validate([
-      'title' => 'string|max:255',
-      'content' => 'string',
-      'category' => 'string|max:100',
+      'title' => 'required|string|max:255',
+      'content' => 'required|string',
+      'type' => 'required|in:general,tone,format,command',
+      'priority' => 'required|integer|min:0',
+      'is_active' => 'required|boolean',
     ]);
 
-    $instruction->update($validated);
-    return response()->json($instruction);
+    $customInstruction->update($validated);
+
+    return response()->json($customInstruction->fresh());
   }
 
   public function destroy($id)
   {
-    $instruction = CustomInstruction::findOrFail($id);
-    $instruction->delete();
-    return response()->json(null, 204);
+    $customInstruction = CustomInstruction::where('user_id', auth()->id())
+      ->findOrFail($id);
+
+    $customInstruction->delete();
+    return response()->noContent();
   }
 }

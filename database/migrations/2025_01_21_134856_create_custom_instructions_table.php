@@ -6,26 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-  /**
-   * Run the migrations.
-   */
   public function up(): void
   {
     Schema::create('custom_instructions', function (Blueprint $table) {
       $table->id();
-      $table->foreignId('user_id')
-        ->constrained()
-        ->onDelete('cascade');
+      $table->foreignId('user_id')->constrained()->onDelete('cascade');
       $table->string('title');
       $table->text('content');
-      $table->string('category');
+      $table->string('type')->default('general');
+      $table->json('settings')->nullable();
+      $table->boolean('is_active')->default(true);
+      $table->integer('priority')->default(0);
       $table->timestamps();
     });
   }
 
-  /**
-   * Reverse the migrations.
-   */
   public function down(): void
   {
     Schema::dropIfExists('custom_instructions');
