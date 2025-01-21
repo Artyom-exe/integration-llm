@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use App\Models\Conversation;
 
 class ChatService
 {
@@ -44,7 +45,7 @@ class ChatService
     });
   }
 
-  public function streamConversation(array $messages, ?string $model = null, float $temperature = 0.7)
+  public function streamConversation(array $messages, ?string $model = null, float $temperature = 0.7, ?Conversation $conversation = null)
   {
     try {
       logger()->info('Début streamConversation', [
@@ -58,7 +59,9 @@ class ChatService
         logger()->info('Modèle par défaut utilisé:', ['model' => $model]);
       }
 
-      $messages = [$this->getChatSystemPrompt(), ...$messages];
+      // Récupérer le système prompt en tenant compte de la conversation
+      $systemPrompt = $this->getChatSystemPrompt($conversation);
+      $messages = [$systemPrompt, ...$messages];
 
       // Méthode "createStreamed" qui renvoie un flux "StreamResponse"
       return $this->client->chat()->createStreamed([
@@ -94,32 +97,41 @@ class ChatService
       ->make();
   }
 
-  private function getChatSystemPrompt(): array
+  private function getChatSystemPrompt(?Conversation $conversation = null): array
   {
     $user = auth()->user();
     $now = now()->locale('fr')->translatedFormat('l d F Y H:i');
 
-    // Récupérer toutes les instructions système de l'utilisateur
-    $systemInstructions = $user->customInstructions()
-      ->where('category', 'system')
-      ->get()
-      ->pluck('content')
-      ->join("\n");
+    // Récupérer les instructions actives
+    $instructionsQuery = $user->customInstructions()->where('is_active', true);
 
-    $basePrompt = "Tu as décidé de t'appeler Nexus et tu es un assistant de chat.\n";
-    $basePrompt .= "Réponds dans la langue dans laquelle on te parle.\n";
-    $basePrompt .= "La date et l'heure actuelles sont : {$now}.\n";
-    $basePrompt .= "Tu es actuellement utilisé par {$user->name}.\n\n";
-
-    // Ajouter les instructions système personnalisées
-    if ($systemInstructions) {
-      $basePrompt .= "Instructions personnalisées:\n{$systemInstructions}\n\n";
+    // Si une conversation spécifique a une instruction personnalisée, l'utiliser
+    if ($conversation && $conversation->custom_instruction_id) {
+      $instructionsQuery->where('id', $conversation->custom_instruction_id);
     }
 
-    $basePrompt .= "Règles pour ton comportement:\n";
-    $basePrompt .= "1. Réponds toujours de manière précise et concise sauf si on te demande plus de détails.\n";
-    $basePrompt .= "2. Adapte tes explications au niveau de l'utilisateur si tu en disposes.\n";
-    $basePrompt .= "3. Ne fournis jamais d'informations non sollicitées ou incertaines.\n";
+    $instructions = $instructionsQuery->orderBy('priority', 'desc')->get();
+
+    // Les instructions sont déjà triées par priorité descendante (les plus prioritaires d'abord)
+    $basePrompt = "Tu es Nexus, un assistant personnalisé.\n";
+    $basePrompt .= "Date actuelle : {$now}\n";
+    $basePrompt .= "Utilisateur : {$user->name}\n\n";
+
+    // Instructions prioritaires d'abord, par type
+    foreach (['general', 'tone', 'format', 'command'] as $type) {
+      $typeInstructions = $instructions->where('type', $type)
+        ->pluck('content')
+        ->join("\n");
+
+      if ($typeInstructions) {
+        $basePrompt .= match ($type) {
+          'general' => "Instructions générales:\n{$typeInstructions}\n\n",
+          'tone' => "Ton à adopter:\n{$typeInstructions}\n\n",
+          'format' => "Format des réponses:\n{$typeInstructions}\n\n",
+          'command' => "Commandes disponibles:\n{$typeInstructions}\n\n",
+        };
+      }
+    }
 
     return [
       'role' => 'system',

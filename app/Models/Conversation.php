@@ -12,6 +12,7 @@ class Conversation extends Model
     'user_id',
     'title',
     'model',
+    'custom_instruction_id'
   ];
 
   public function user(): BelongsTo
@@ -22,5 +23,10 @@ class Conversation extends Model
   public function messages(): HasMany
   {
     return $this->hasMany(Message::class);
+  }
+
+  public function customInstruction()
+  {
+    return $this->belongsTo(CustomInstruction::class);
   }
 }
