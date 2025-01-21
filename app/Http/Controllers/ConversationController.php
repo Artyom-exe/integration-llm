@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
+use App\Events\ConversationCreated;
 
 class ConversationController extends Controller
 {
@@ -22,6 +23,7 @@ class ConversationController extends Controller
       'title' => 'Nouvelle conversation', // Titre temporaire
     ]);
 
+    // Suppression du broadcast ici car il sera fait après la génération du titre
     return response()->json(['conversation' => $conversation], 201);
   }
 
@@ -37,6 +39,9 @@ class ConversationController extends Controller
       ->firstOrFail();
 
     $conversation->update(['model' => $request->model]);
+
+    // Recharger la conversation avec ses messages
+    $conversation = $conversation->fresh(['messages']);
 
     return response()->json(['conversation' => $conversation], 200);
   }
