@@ -75,42 +75,15 @@ class ChatService
     }
   }
 
-  public function sendMessage(array $messages, string $model = null, float $temperature = 0.7): string
+  public function generateTitle(string $messages): mixed
   {
-    try {
-      logger()->info('Envoi du message', [
-        'model' => $model,
-        'temperature' => $temperature,
-      ]);
-
-      $models = collect($this->getModels());
-      if (!$model || !$models->contains('id', $model)) {
-        $model = self::DEFAULT_MODEL;
-        logger()->info('Modèle par défaut utilisé:', ['model' => $model]);
-      }
-
-      $messages = [$this->getChatSystemPrompt(), ...$messages];
-      $response = $this->client->chat()->create([
-        'model' => $model,
-        'messages' => $messages,
-        'temperature' => $temperature,
-      ]);
-
-      logger()->info('Réponse reçue:', ['response' => $response]);
-
-      return $response->choices[0]->message->content;
-    } catch (\Exception $e) {
-      if ($e->getMessage() === 'Undefined array key "choices"') {
-        throw new \Exception("Limite de messages atteinte");
-      }
-
-      logger()->error('Erreur dans sendMessage:', [
-        'message' => $e->getMessage(),
-        'trace' => $e->getTraceAsString(),
-      ]);
-
-      throw $e;
-    }
+    return $this->streamConversation(
+      messages: [[
+        'role' => 'user',
+        'content' => "En tant qu'utilisateur, je te demande de générer un titre court et accrocheur de 4 mots maximum qui résume précisément l'échange suivant :\n\n$messages\n\nLe titre doit être uniquement composé de 1 à 4 mots clairs et précis, sans phrase complète, ni texte supplémentaire. Si les messages sont incohérents, incompréhensibles, ou trop courts pour être résumés, ta réponse doit uniquement et strictement être : 'Clarification request'. Aucun autre texte, phrase ou détail ne doit être inclus dans la réponse, même si cela semble approprié. Par défaut si les messages sont trop longs ou trop complexes, tu peux répondre 'Résumé de la conversation'."
+      ]],
+      model: self::DEFAULT_MODEL
+    );
   }
 
   private function createOpenAIClient(): \OpenAI\Client
@@ -152,20 +125,5 @@ class ChatService
       'role' => 'system',
       'content' => $basePrompt
     ];
-  }
-
-  public function generateTitle(string $message): string
-  {
-
-    return $this->sendMessage(
-      messages: [[
-        'role' => 'user',
-        'content' => "En tant qu'utilisateur, je te demande de générer un titre court et accrocheur de 4 mots maximum qui résume précisément la conversation suivante : $message. Le titre doit être uniquement composé de 1 à 4 mots clairs et précis, sans phrase complète, ni texte supplémentaire. Si le message est incohérent, incompréhensible, ou trop court pour être résumé, ta réponse doit uniquement et strictement être : 'Clarification request'. Aucun autre texte, phrase ou détail ne doit être inclus dans la réponse, même si cela semble approprié. Par default si le message est trop long ou trop complexe ou sans contenu, tu peux répondre 'Résumé de la conversation'."
-
-
-
-      ]],
-      model: self::DEFAULT_MODEL
-    );
   }
 }

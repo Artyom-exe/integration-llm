@@ -8,6 +8,7 @@ use App\Services\ChatService;
 use Illuminate\Http\Request;
 use App\Events\ChatMessageStreamed;
 use App\Models\CustomInstruction;
+use App\Events\ConversationCreated;
 
 class MessageController extends Controller
 {
@@ -106,10 +107,47 @@ class MessageController extends Controller
         'content' => $fullResponse
       ]);
 
+      // Vérifier si on doit générer/régénérer le titre
+      $shouldGenerateTitle = $conversation->title === 'Nouvelle conversation' ||
+        ($conversation->messages()->count() % 7 === 0); // Tous les 7 messages
+
       // Générer et mettre à jour le titre si nécessaire
       if ($shouldGenerateTitle) {
-        $title = (new ChatService())->generateTitle($request->input('message'));
-        $conversation->update(['title' => $title]);
+        // Pour la régénération, utiliser les derniers messages comme contexte
+        $contextMessages = $conversation->messages()
+          ->orderBy('created_at', 'desc')
+          ->take(7)
+          ->get()
+          ->map(fn($msg) => $msg->content)
+          ->join("\n");
+
+        $titleStream = $chatService->generateTitle($contextMessages);
+        $titleContent = '';
+
+        foreach ($titleStream as $response) {
+          $chunk = $response->choices[0]->delta->content ?? '';
+          if ($chunk) {
+            $titleContent .= $chunk;
+            broadcast(new ChatMessageStreamed(
+              channel: $channelName,
+              content: $titleContent,
+              isComplete: false,
+              isTitle: true
+            ));
+          }
+        }
+
+        $conversation->update(['title' => $titleContent]);
+
+        // Broadcaster la mise à jour de la conversation
+        broadcast(new ConversationCreated($conversation->fresh()));
+
+        broadcast(new ChatMessageStreamed(
+          channel: $channelName,
+          content: $titleContent,
+          isComplete: true,
+          isTitle: true
+        ));
       }
 
       // 10. Émettre un dernier événement pour signaler la complétion

@@ -64,7 +64,10 @@ const selectConversation = (conversationId) => {
   );
 
   if (selectedConversation) {
-    messages.value = (selectedConversation.messages || []).map(message => ({
+    // S'assurer que les messages existent
+    const conversationMessages = selectedConversation.messages || [];
+
+    messages.value = conversationMessages.map(message => ({
       ...message,
       content: message.role === 'assistant' ? md.render(message.content) : message.content
     }));
@@ -101,7 +104,7 @@ const setupWebSocket = (conversationId) => {
         // Programmer le prochain caractère
         typingTimeout = setTimeout(() => {
           typeText(text, index + 1);
-        }, 10); // Ajustez cette valeur pour la vitesse de frappe
+        }, 1); // Ajustez cette valeur pour la vitesse de frappe
       }
     }
   };
@@ -113,6 +116,17 @@ const setupWebSocket = (conversationId) => {
       if (event.error) {
         messages.value.pop();
         isLoading.value = false;
+        return;
+      }
+
+      // Gestion du streaming du titre
+      if (event.isTitle) {
+        const conversation = conversations.value.find(c => c.id === activeConversationId.value);
+        if (conversation) {
+          conversation.title = event.content;
+          // Mettre à jour les conversations filtrées
+          filteredConversations.value = filterConversations(searchQuery.value);
+        }
         return;
       }
 
@@ -161,27 +175,58 @@ const addMessage = (role, content) => {
 };
 
 // Créer une nouvelle conversation
-const createNewConversation = async () => {
+const createNewConversation = async (withMessage = false) => {
   try {
     const response = await axios.post("/conversations", {
       model: form.model,
     });
 
     const data = response.data;
-    conversations.value.unshift({
+    const newConversation = {
       ...data.conversation,
-      messages: [] // Initialiser les messages pour éviter l'erreur
-    });
-    selectConversation(data.conversation.id);
+      messages: [],
+      title: 'Nouvelle conversation'
+    };
+
+    conversations.value.unshift(newConversation);
+    selectConversation(newConversation.id);
+
+    // Envoyer le message seulement si on en a un
+    if (withMessage) {
+      await sendMessage();
+    }
   } catch (error) {
     console.error("Erreur lors de la création de la conversation", error);
   }
+};
+
+// Écouter les nouvelles conversations
+const listenForNewConversations = () => {
+  window.Echo.private('conversations')
+    .listen('.conversation.created', (event) => {
+      // Chercher si la conversation existe déjà
+      const existingConversation = conversations.value.find(c => c.id === event.conversation.id);
+
+      if (existingConversation) {
+        // Mettre à jour la conversation existante
+        Object.assign(existingConversation, event.conversation);
+      } else {
+        // Ajouter la nouvelle conversation seulement si elle n'existe pas
+        conversations.value.unshift({
+          ...event.conversation,
+          messages: []
+        });
+      }
+      // Mettre à jour les conversations filtrées
+      filteredConversations.value = filterConversations(searchQuery.value);
+    });
 };
 
 onMounted(() => {
   if (props.conversations && props.conversations.length) {
     selectConversation(props.conversations[0].id);
   }
+  listenForNewConversations();
 });
 
 // Envoyer un message
@@ -209,7 +254,7 @@ const submitForm = () => {
   if (!form.message.trim()) return;
 
   if (!activeConversationId.value) {
-    createNewConversation();
+    createNewConversation(true); // true indique qu'on a un message à envoyer
   } else {
     sendMessage();
   }
@@ -228,18 +273,35 @@ const scrollToBottom = () => {
 
 // Mettre à jour le modèle d'IA pour une conversation
 const updateModel = async (conversationId, model) => {
+  if (!conversationId || !model) return;
+
   try {
-    await axios.put(`/conversations/${conversationId}/model`, {
+    const response = await axios.put(`/conversations/${conversationId}/model`, {
       model: model,
     });
+
+    // Mettre à jour la conversation dans le state
+    const conversation = conversations.value.find(c => c.id === conversationId);
+    if (conversation && response.data.conversation) {
+      // Sauvegarder les messages actuels
+      const currentMessages = [...messages.value];
+
+      // Mettre à jour la conversation
+      Object.assign(conversation, response.data.conversation);
+
+      // Si c'est la conversation active, restaurer les messages
+      if (activeConversationId.value === conversationId) {
+        messages.value = currentMessages;
+      }
+    }
   } catch (error) {
     console.error("Erreur lors de la mise à jour du modèle", error);
   }
 };
 
 // Surveiller les changements de modèle
-watch(() => form.model, (newModel) => {
-  if (activeConversationId.value) {
+watch(() => form.model, (newModel, oldModel) => {
+  if (activeConversationId.value && newModel !== oldModel) {
     updateModel(activeConversationId.value, newModel);
   }
 });
@@ -268,7 +330,7 @@ function adjustHeight(event) {
           class="w-full bg-gray-700 text-center mb-2 text-white text-xs rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-0 border-none"
         />
         <button
-          @click="createNewConversation"
+          @click="createNewConversation(false)"
           class="w-full text-xs  bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition"
         >
           Nouvelle Conversation
