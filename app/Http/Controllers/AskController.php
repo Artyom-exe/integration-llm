@@ -2,28 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\ChatService;
 use App\Models\Conversation;
+use App\Services\ChatService;
 use Inertia\Inertia;
 
 class AskController extends Controller
 {
   public function index()
   {
-    $models = (new ChatService())->getModels();
-    $selectedModel = ChatService::DEFAULT_MODEL;
+    // Nettoyer les conversations temporaires
+    Conversation::where('user_id', auth()->id())
+      ->where('is_temporary', true)
+      ->delete();
 
-    $conversations = Conversation::where('user_id', auth()->id())
-      ->with(['messages' => function ($query) {
-        $query->orderBy('created_at', 'asc');
-      }])
-      ->orderBy('updated_at', 'desc')
-      ->get();
+    $chatService = new ChatService();
 
     return Inertia::render('Ask/Index', [
-      'models' => $models,
-      'selectedModel' => $selectedModel,
-      'conversations' => $conversations,
+      'conversations' => Conversation::where('user_id', auth()->id())
+        ->with('messages')
+        ->orderBy('updated_at', 'desc')
+        ->get(),
+      'models' => $chatService->getModels(),
+      'selectedModel' => auth()->user()->last_used_model
     ]);
   }
 }

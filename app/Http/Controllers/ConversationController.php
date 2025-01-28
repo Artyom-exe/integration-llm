@@ -21,6 +21,7 @@ class ConversationController extends Controller
       'user_id' => auth()->id(),
       'model' => $request->model,
       'title' => 'Nouvelle conversation', // Titre temporaire
+      'is_temporary' => true // Marquer comme temporaire à la création
     ]);
 
     // Suppression du broadcast ici car il sera fait après la génération du titre
@@ -62,6 +63,7 @@ class ConversationController extends Controller
   public function index()
   {
     $conversations = Conversation::where('user_id', auth()->id())
+      ->where('is_temporary', false) // Ne pas afficher les conversations temporaires
       ->with('messages')
       ->orderBy('updated_at', 'desc')
       ->get();
@@ -76,6 +78,17 @@ class ConversationController extends Controller
       ->where('user_id', auth()->id())
       ->with('messages')
       ->firstOrFail();
+
+    return response()->json(['conversation' => $conversation]);
+  }
+
+  public function confirm($id)
+  {
+    $conversation = Conversation::where('id', $id)
+      ->where('user_id', auth()->id())
+      ->firstOrFail();
+
+    $conversation->update(['is_temporary' => false]);
 
     return response()->json(['conversation' => $conversation]);
   }

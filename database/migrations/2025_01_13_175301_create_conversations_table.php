@@ -16,6 +16,7 @@ return new class extends Migration
       $table->foreignId('user_id')->constrained()->onDelete('cascade');
       $table->string('title')->nullable(); // Titre de la conversation
       $table->string('model'); // Modèle choisi
+      $table->boolean('is_temporary')->default(true); // Ajout du champ
       $table->timestamps();
     });
   }

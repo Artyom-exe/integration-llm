@@ -12,7 +12,12 @@ class Conversation extends Model
     'user_id',
     'title',
     'model',
-    'custom_instruction_id'
+    'custom_instruction_id',
+    'is_temporary'
+  ];
+
+  protected $casts = [
+    'is_temporary' => 'boolean',
   ];
 
   public function user(): BelongsTo
