@@ -284,11 +284,8 @@ const listenForNewConversations = () => {
 };
 
 onMounted(() => {
-  // Ne sélectionner une conversation que s'il y en a une existante
-  if (props.conversations && props.conversations.length) {
-    selectConversation(props.conversations[0].id);
-  }
-  // Sinon, ne rien faire - la vue initiale sera affichée
+  // Au lieu de chercher une conversation existante, on en crée une nouvelle
+  createNewConversation(false);
   listenForNewConversations();
 });
 
@@ -591,7 +588,7 @@ function adjustHeight(event) {
                       stroke-linejoin="round"
                       stroke-width="2"
                       d="M5 13l4 4L19 7"
-                    />
+                      />
                   </svg>
                 </button>
               </div>

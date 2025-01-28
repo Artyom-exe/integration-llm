@@ -17,11 +17,15 @@ class AskController extends Controller
 
     $chatService = new ChatService();
 
+    // Ne récupérer que les conversations permanentes
+    $conversations = Conversation::where('user_id', auth()->id())
+      ->where('is_temporary', false)
+      ->with('messages')
+      ->orderBy('updated_at', 'desc')
+      ->get();
+
     return Inertia::render('Ask/Index', [
-      'conversations' => Conversation::where('user_id', auth()->id())
-        ->with('messages')
-        ->orderBy('updated_at', 'desc')
-        ->get(),
+      'conversations' => $conversations,
       'models' => $chatService->getModels(),
       'selectedModel' => auth()->user()->last_used_model
     ]);
