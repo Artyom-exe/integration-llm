@@ -38,6 +38,7 @@ class ChatService
             'context_length' => $model['context_length'],
             'max_completion_tokens' => $model['top_provider']['max_completion_tokens'],
             'pricing' => $model['pricing'],
+            'supports_image' => 'text+image->text' === ($model['architecture']['modality'] ?? null)
           ];
         })
         ->values()
