@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
+import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from "vue";
 import { useForm } from "@inertiajs/vue3";
 import ChatMessage from "@/Components/ChatMessage.vue";
 import MarkdownIt from "markdown-it";
@@ -376,6 +376,10 @@ watch(() => form.model, (newModel, oldModel) => {
   }
 });
 
+// Ajouter une computed property pour vérifier si la conversation est vide
+const isEmptyConversation = computed(() => {
+  return activeConversationId.value && messages.value.length === 0;
+});
 
 function adjustHeight(event) {
   const textarea = event.target;
@@ -404,7 +408,7 @@ function adjustHeight(event) {
           @click="createNewConversation(false)"
           class="w-full text-xs  bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition"
         >
-          Nouvelle Conversation
+          AI Nexus
         </button>
       </div>
 
@@ -450,73 +454,149 @@ function adjustHeight(event) {
       </button>
     </header>
 
-      <div ref="chatContainer" class="flex-grow overflow-y-auto p-6 flex flex-col items-center bg-gray-900 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
-        <ChatMessage v-for="(message, index) in messages" :key="index" :message="message" />
-      </div>
+      <!-- Zone principale conditionnelle -->
+      <template v-if="!activeConversationId || isEmptyConversation">
+        <!-- Vue initiale centrée -->
+        <div class="flex-grow flex flex-col items-center justify-center">
+          <h2 class="text-2xl font-light text-gray-300 mb-8">
+            Que puis-je faire pour vous ?
+          </h2>
+          <div class="w-2/3 max-w-2xl">
+            <form @submit.prevent="submitForm" class="flex flex-col items-center">
+              <div class="w-full bg-gray-700 rounded-3xl">
+                <textarea
+                  v-model="form.message"
+                  placeholder="Posez votre question..."
+                  class="bg-gray-700 text-white border-none pt-3 pl-3 pb-0 rounded-t-3xl w-full text-sm focus:outline-none focus:ring-0 resize-none scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 max-h-[200px] h-[40px]"
+                  @input="adjustHeight($event)"
+                  @keydown.enter.prevent="submitForm"
+                ></textarea>
+                <div class="bg-gray-700 text-white rounded-b-3xl flex justify-end px-2 py-2">
+                  <button
+                    type="submit"
+                    class="bg-blue-500 text-white w-8 h-8 hover:bg-blue-600 transition rounded-full flex items-center justify-center"
+                    :disabled="isLoading"
+                  >
+                    <!-- Icône de chargement -->
+                    <svg
+                      v-if="isLoading"
+                      class="animate-spin h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
 
-
-      <div class="p-6 pt-0 bg-gray-900 justify-center flex">
-        <form @submit.prevent="submitForm" class="flex items-center space-x-4 w-full justify-center">
-          <div class="w-3/6 bg-gray-700 rounded-3xl">
-            <textarea
-              v-model="form.message"
-              placeholder="Message AI Nexus..."
-              class="bg-gray-700 text-white border-none pt-3 pl-3 pb-0 rounded-t-3xl w-full text-sm focus:outline-none focus:ring-0 resize-none scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 max-h-[200px] h-[40px]"
-              @input="adjustHeight($event)"
-              @keydown.enter.prevent="submitForm"
-              >
-
-          </textarea>
-            <div class="bg-gray-700 text-white rounded-b-3xl flex justify-end px-2 py-2">
-              <button
-                type="submit"
-                class="bg-blue-500 text-white w-8 h-8 hover:bg-blue-600 transition rounded-full flex items-center justify-center"
-                :disabled="isLoading"
-              >
-                <!-- Icône de chargement -->
-                <svg
-                  v-if="isLoading"
-                  class="animate-spin h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-
-                <!-- Icône de flèche -->
-                <svg
-                  v-else
-                  class="h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  :stroke="'#1f2937'"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </button>
-            </div>
+                    <!-- Icône de flèche -->
+                    <svg
+                      v-else
+                      class="h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      :stroke="'#1f2937'"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
-        </form>
-      </div>
+        </div>
+      </template>
+
+      <template v-else>
+        <!-- Vue normale avec les messages -->
+        <div ref="chatContainer" class="flex-grow overflow-y-auto p-6 flex flex-col items-center bg-gray-900 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
+          <ChatMessage
+            v-for="(message, index) in messages"
+            :key="index"
+            :message="message"
+          />
+        </div>
+
+        <!-- Zone de saisie normale -->
+        <div class="p-6 pt-0 bg-gray-900 justify-center flex">
+          <form @submit.prevent="submitForm" class="flex items-center space-x-4 w-full justify-center">
+            <div class="w-3/6 bg-gray-700 rounded-3xl">
+              <textarea
+                v-model="form.message"
+                placeholder="Message AI Nexus..."
+                class="bg-gray-700 text-white border-none pt-3 pl-3 pb-0 rounded-t-3xl w-full text-sm focus:outline-none focus:ring-0 resize-none scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 max-h-[200px] h-[40px]"
+                @input="adjustHeight($event)"
+                @keydown.enter.prevent="submitForm"
+              ></textarea>
+              <div class="bg-gray-700 text-white rounded-b-3xl flex justify-end px-2 py-2">
+                <button
+                  type="submit"
+                  class="bg-blue-500 text-white w-8 h-8 hover:bg-blue-600 transition rounded-full flex items-center justify-center"
+                  :disabled="isLoading"
+                >
+                  <!-- Icône de chargement -->
+                  <svg
+                    v-if="isLoading"
+                    class="animate-spin h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+
+                  <!-- Icône de flèche -->
+                  <svg
+                    v-else
+                    class="h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 24 24"
+                    :stroke="'#1f2937'"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </template>
+
     </div>
   </div>
 
