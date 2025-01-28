@@ -36,6 +36,7 @@ Route::middleware([
   Route::controller(ConversationController::class)->group(function () {
     Route::get('/conversations', 'index')->name('conversations.index');
     Route::post('/conversations', 'store')->name('conversations.store');
+    Route::get('/conversations/{conversation}', 'show')->name('conversations.show');
     Route::put('/conversations/{id}/model', 'updateModel')->name('conversations.updateModel');
     Route::put('/conversations/{id}/instruction', 'updateInstruction')->name('conversations.update-instruction');
     Route::delete('/conversations/{id}', 'destroy')->name('conversations.destroy');

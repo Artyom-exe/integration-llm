@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick, onMounted } from "vue";
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { useForm } from "@inertiajs/vue3";
 import ChatMessage from "@/Components/ChatMessage.vue";
 import MarkdownIt from "markdown-it";
@@ -45,6 +45,33 @@ const isLoading = ref(false);
 const channelSubscription = ref(null);
 const showInstructionsModal = ref(false);
 
+// Modifier les états de connexion
+const isConnecting = ref(false);
+const reconnectAttempts = ref(0);
+const maxReconnectAttempts = 5; // Augmenté à 5 tentatives
+
+// Ajouter un état pour suivre les connexions tentées
+const attemptedConnections = ref(new Set());
+
+// Fonction de nettoyage du WebSocket améliorée
+const cleanupWebSocket = async () => {
+  try {
+    if (channelSubscription.value) {
+      await channelSubscription.value.unsubscribe();
+      channelSubscription.value = null;
+    }
+    isConnecting.value = false;
+    reconnectAttempts.value = 0;
+
+    // Réinitialiser Laravel Echo pour ce canal
+    if (activeConversationId.value) {
+      window.Echo.leave(`chat.${activeConversationId.value}`);
+    }
+  } catch (error) {
+    console.error("Erreur lors du nettoyage du WebSocket:", error);
+  }
+};
+
 // Filtrer les conversations en fonction de la recherche
 const filterConversations = (query) => {
   return conversations.value
@@ -58,96 +85,140 @@ watch(searchQuery, (newQuery) => {
   filteredConversations.value = filterConversations(newQuery);
 }, { immediate: true });
 
-// Sélectionner une conversation
-const selectConversation = (conversationId) => {
-  activeConversationId.value = conversationId;
-  const selectedConversation = conversations.value.find(
-    (conv) => conv.id === conversationId
-  );
+// Sélection de conversation optimisée
+const selectConversation = async (conversationId) => {
+  try {
+    // Nettoyage complet avant de changer de conversation
+    await cleanupWebSocket();
 
-  if (selectedConversation) {
-    // S'assurer que les messages existent
-    const conversationMessages = selectedConversation.messages || [];
+    activeConversationId.value = conversationId;
+    const selectedConversation = conversations.value.find(
+      (conv) => conv.id === conversationId
+    );
 
-    messages.value = conversationMessages.map(message => ({
+    if (!selectedConversation) {
+      throw new Error("Conversation non trouvée");
+    }
+
+    // Toujours recharger les données de la conversation depuis le serveur
+    const response = await axios.get(`/conversations/${conversationId}`);
+    Object.assign(selectedConversation, response.data.conversation);
+
+    messages.value = (selectedConversation.messages || []).map(message => ({
       ...message,
       content: message.role === 'assistant' ? md.render(message.content) : message.content
     }));
 
     form.model = selectedConversation.model;
-    setupWebSocket(conversationId);
-    nextTick(scrollToBottom);
+
+    // Attendre un petit moment avant de configurer le WebSocket
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await setupWebSocket(conversationId);
+    scrollToBottom();
+  } catch (error) {
+    console.error("Erreur lors de la sélection de la conversation:", error);
+    if (error.response?.status === 404 || error.response?.status === 500) {
+      window.location.reload();
+    }
   }
 };
 
-// Configuration du WebSocket pour le streaming
-const setupWebSocket = (conversationId) => {
-  if (channelSubscription.value) {
-    channelSubscription.value.unsubscribe();
+// Configuration du WebSocket optimisée
+const setupWebSocket = async (conversationId) => {
+  if (isConnecting.value) {
+    await cleanupWebSocket(); // Force le nettoyage si déjà en cours de connexion
   }
 
-  const channel = `chat.${conversationId}`;
-  let currentText = '';
+  try {
+    isConnecting.value = true;
+    const channel = `chat.${conversationId}`;
+    let currentText = '';
 
-  channelSubscription.value = window.Echo.private(channel)
-    .subscribed(() => console.log("✅ Connecté au canal:", channel))
-    .error(error => console.error("❌ Erreur:", error))
-    .listen(".message.streamed", (event) => {
-      if (event.error) {
-        messages.value.pop();
-        isLoading.value = false;
-        return;
-      }
+    // Force la déconnexion du canal précédent
+    window.Echo.leave(channel);
+    await new Promise(resolve => setTimeout(resolve, 100)); // Petit délai pour assurer la déconnexion
 
-      // Gestion du streaming du titre
-      if (event.isTitle) {
-        const conversation = conversations.value.find(c => c.id === activeConversationId.value);
-        if (conversation) {
-          conversation.title = event.content;
-          filteredConversations.value = filterConversations(searchQuery.value);
+    channelSubscription.value = window.Echo.private(channel)
+      .subscribed(() => {
+        console.log("✅ Connecté au canal:", channel);
+        isConnecting.value = false;
+        reconnectAttempts.value = 0;
+        attemptedConnections.value.add(conversationId);
+      })
+      .error(async (error) => {
+        console.error("❌ Erreur WebSocket:", error);
+        await cleanupWebSocket();
+
+        // Réinitialiser la connexion complètement
+        if (reconnectAttempts.value < maxReconnectAttempts) {
+          reconnectAttempts.value++;
+          const delay = Math.min(1000 * reconnectAttempts.value, 5000);
+          setTimeout(() => {
+            window.Echo.leave(channel);
+            setupWebSocket(conversationId);
+          }, delay);
         }
-        return;
-      }
-
-      const lastMessage = messages.value[messages.value.length - 1];
-      if (lastMessage && lastMessage.role === 'assistant') {
-        if (!event.isComplete) {
-          // Accumuler le texte
-          currentText += event.content;
-        } else {
-          // Message final
-          currentText = event.content;
-        }
-
-        // Mettre à jour le contenu avec le rendu Markdown
-        lastMessage.content = md.render(currentText);
-
-        // Scroll automatique
-        nextTick(() => {
-          chatContainer.value?.scrollTo({
-            top: chatContainer.value.scrollHeight,
-            behavior: 'auto'
-          });
-        });
-
-        if (event.isComplete) {
+      })
+      .listen(".message.streamed", (event) => {
+        if (event.error) {
+          messages.value.pop();
           isLoading.value = false;
-          // Mise à jour de la conversation
+          return;
+        }
+
+        // Gestion du streaming du titre
+        if (event.isTitle) {
           const conversation = conversations.value.find(c => c.id === activeConversationId.value);
-          if (conversation?.messages) {
-            const existingMessage = conversation.messages.find(m => m.content === '');
-            if (existingMessage) {
-              existingMessage.content = currentText;
-            } else {
-              conversation.messages.push({
-                role: 'assistant',
-                content: currentText
-              });
+          if (conversation) {
+            conversation.title = event.content;
+            filteredConversations.value = filterConversations(searchQuery.value);
+          }
+          return;
+        }
+
+        const lastMessage = messages.value[messages.value.length - 1];
+        if (lastMessage && lastMessage.role === 'assistant') {
+          if (!event.isComplete) {
+            // Accumuler le texte
+            currentText += event.content;
+          } else {
+            // Message final
+            currentText = event.content;
+          }
+
+          // Mettre à jour le contenu avec le rendu Markdown
+          lastMessage.content = md.render(currentText);
+
+          // Scroll automatique
+          nextTick(() => {
+            chatContainer.value?.scrollTo({
+              top: chatContainer.value.scrollHeight,
+              behavior: 'auto'
+            });
+          });
+
+          if (event.isComplete) {
+            isLoading.value = false;
+            // Mise à jour de la conversation
+            const conversation = conversations.value.find(c => c.id === activeConversationId.value);
+            if (conversation?.messages) {
+              const existingMessage = conversation.messages.find(m => m.content === '');
+              if (existingMessage) {
+                existingMessage.content = currentText;
+              } else {
+                conversation.messages.push({
+                  role: 'assistant',
+                  content: currentText
+                });
+              }
             }
           }
         }
-      }
-    });
+      });
+  } catch (error) {
+    console.error("Erreur lors de la configuration du WebSocket:", error);
+    isConnecting.value = false;
+  }
 };
 
 // Ajouter un message
@@ -218,6 +289,16 @@ onMounted(() => {
   listenForNewConversations();
 });
 
+// Amélioration du nettoyage lors du démontage
+onBeforeUnmount(async () => {
+  await cleanupWebSocket();
+  // Nettoyer toutes les connexions tentées
+  attemptedConnections.value.forEach(id => {
+    window.Echo.leave(`chat.${id}`);
+  });
+  attemptedConnections.value.clear();
+});
+
 // Envoyer un message
 const sendMessage = async () => {
   addMessage("user", form.message);
@@ -260,7 +341,6 @@ const scrollToBottom = () => {
   }
 };
 
-// Mettre à jour le modèle d'IA pour une conversation
 // Mettre à jour le modèle d'IA pour une conversation
 const updateModel = async (conversationId, model) => {
   if (!conversationId || !model) return;
@@ -409,4 +489,5 @@ function adjustHeight(event) {
     @close="showInstructionsModal = false"
     @update="selectConversation(activeConversationId)"
   />
+
 </template>
