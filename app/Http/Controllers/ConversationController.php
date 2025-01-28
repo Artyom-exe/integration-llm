@@ -68,4 +68,15 @@ class ConversationController extends Controller
 
     return response()->json(['conversations' => $conversations], 200);
   }
+
+  // Ajouter cette nouvelle méthode
+  public function show($id)
+  {
+    $conversation = Conversation::where('id', $id)
+      ->where('user_id', auth()->id())
+      ->with('messages')
+      ->firstOrFail();
+
+    return response()->json(['conversation' => $conversation]);
+  }
 }
