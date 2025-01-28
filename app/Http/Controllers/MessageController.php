@@ -179,6 +179,10 @@ class MessageController extends Controller
   public function store(Request $request, $conversationId)
   {
     $conversation = Conversation::findOrFail($conversationId);
+
+    // Rendre la conversation permanente lors du premier message
+    $conversation->update(['is_temporary' => false]);
+
     return $this->streamMessage($conversation, new Request([
       'message' => $request->message,
       'model' => $conversation->model

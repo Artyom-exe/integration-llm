@@ -239,6 +239,7 @@ const createNewConversation = async (withMessage = false) => {
   try {
     const response = await axios.post("/conversations", {
       model: form.model,
+      temporary: true
     });
 
     const data = response.data;
@@ -251,8 +252,8 @@ const createNewConversation = async (withMessage = false) => {
     conversations.value.unshift(newConversation);
     selectConversation(newConversation.id);
 
-    // Envoyer le message seulement si on en a un
-    if (withMessage) {
+    // Envoyer le message seulement si on en a un message et qu'il n'est pas vide
+    if (withMessage && form.message.trim()) {
       await sendMessage();
     }
   } catch (error) {
@@ -283,9 +284,11 @@ const listenForNewConversations = () => {
 };
 
 onMounted(() => {
+  // Ne sélectionner une conversation que s'il y en a une existante
   if (props.conversations && props.conversations.length) {
     selectConversation(props.conversations[0].id);
   }
+  // Sinon, ne rien faire - la vue initiale sera affichée
   listenForNewConversations();
 });
 
