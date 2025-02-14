@@ -88,6 +88,29 @@ class ChatService
     }
   }
 
+  public function analyzeImage(string $imageUrl, string $question = "What is in this image?"): array
+  {
+    $payload = [
+      "messages" => [
+        [
+          "role" => "user",
+          "content" => [
+            ["type" => "text", "text" => $question],
+            ["type" => "image_url", "image_url" => ["url" => $imageUrl]]
+          ]
+        ]
+      ]
+    ];
+
+    $response = Http::withHeaders([
+      "Authorization" => "Bearer {$this->apiKey}",
+      "Content-Type" => "application/json"
+    ])->post("https://openrouter.ai/api/v1/chat/completions", $payload);
+
+    return $response->json();
+  }
+
+
   public function generateTitle(string $messages): mixed
   {
     return $this->streamConversation(
