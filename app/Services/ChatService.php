@@ -46,7 +46,7 @@ class ChatService
     });
   }
 
-  public function streamConversation(array $messages, ?string $model = null, float $temperature = 0.7)
+  public function streamConversation(array $messages, ?string $model = null, float $temperature = 0.7, ?Conversation $conversation = null)
   {
     try {
       $models = collect($this->getModels());
@@ -54,6 +54,10 @@ class ChatService
 
       // Vérifier si le modèle supporte les images
       $supportsImages = $selectedModel['supports_image'] ?? false;
+
+      // Ajouter le prompt système au début des messages
+      $systemPrompt = $this->getChatSystemPrompt($conversation);
+      $allMessages = array_merge([$systemPrompt], $messages);
 
       // Préparer les messages pour l'API
       $formattedMessages = array_map(function ($message) use ($supportsImages) {
@@ -68,7 +72,7 @@ class ChatService
           }
         }
         return $message;
-      }, $messages);
+      }, $allMessages);
 
       return $this->client->chat()->createStreamed([
         'model' => $model ?? self::DEFAULT_MODEL,
