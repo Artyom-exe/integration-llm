@@ -8,15 +8,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\CustomInstructionController;
 use Inertia\Inertia;
 
-// Routes publiques
-Route::get('/', function () {
-  return Inertia::render('Welcome', [
-    'canLogin' => Route::has('login'),
-    'canRegister' => Route::has('register'),
-    'laravelVersion' => Application::VERSION,
-    'phpVersion' => PHP_VERSION,
-  ]);
-});
+Route::redirect('/', '/ask');
 
 // Routes protégées
 Route::middleware([
@@ -24,11 +16,6 @@ Route::middleware([
   config('jetstream.auth_session'),
   'verified',
 ])->group(function () {
-  // Dashboard
-  Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-  })->name('dashboard');
-
   // Routes pour l'interface de chat
   Route::get('/ask', [AskController::class, 'index'])->name('ask.index');
 
