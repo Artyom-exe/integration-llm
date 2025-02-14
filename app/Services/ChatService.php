@@ -27,9 +27,9 @@ class ChatService
       ])->get($this->baseUrl . '/models');
 
       return collect($response->json()['data'])
-        // ->filter(function ($model) {
-        //   return str_ends_with($model['id'], '');
-        // })
+        ->filter(function ($model) {
+          return str_ends_with($model['id'], ':free');
+        })
         ->sortBy('name')
         ->map(function ($model) {
           return [
