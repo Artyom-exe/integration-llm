@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Events\ChatMessageStreamed;
 use App\Models\CustomInstruction;
 use App\Events\ConversationCreated;
+use App\Services\ImageService;
 
 class MessageController extends Controller
 {
@@ -18,16 +19,33 @@ class MessageController extends Controller
     $request->validate([
       'message' => 'required|string',
       'model'   => 'nullable|string',
-      'custom_instruction_id' => 'nullable|exists:custom_instructions,id'
+      'custom_instruction_id' => 'nullable|exists:custom_instructions,id',
+      'image' => 'nullable|image|max:10240' // Ajout validation image
     ]);
 
     try {
+      // Traitement de l'image si présente
+      $messageContent = [
+        ['type' => 'text', 'text' => $request->input('message')]
+      ];
+
+      if ($request->hasFile('image')) {
+        $imageService = new ImageService();
+        $optimizedImage = $imageService->optimizeImage($request->file('image')->path());
+        $base64Image = $imageService->getBase64Image($optimizedImage);
+
+        $messageContent[] = [
+          'type' => 'image_url',
+          'image_url' => ['url' => $base64Image]
+        ];
+      }
+
       // Sauvegarder le message et vérifier si on doit générer un titre
       $shouldGenerateTitle = $conversation->title === 'Nouvelle conversation';
 
       // 1. Sauvegarder le message de l'utilisateur
-      $conversation->messages()->create([
-        'content' => $request->input('message'),
+      $userMessage = $conversation->messages()->create([
+        'content' => json_encode($messageContent),
         'role'    => 'user',
       ]);
 

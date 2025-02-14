@@ -27,9 +27,9 @@ class ChatService
       ])->get($this->baseUrl . '/models');
 
       return collect($response->json()['data'])
-        ->filter(function ($model) {
-          return str_ends_with($model['id'], ':free');
-        })
+        // ->filter(function ($model) {
+        //   return str_ends_with($model['id'], '');
+        // })
         ->sortBy('name')
         ->map(function ($model) {
           return [
@@ -46,28 +46,33 @@ class ChatService
     });
   }
 
-  public function streamConversation(array $messages, ?string $model = null, float $temperature = 0.7, ?Conversation $conversation = null)
+  public function streamConversation(array $messages, ?string $model = null, float $temperature = 0.7)
   {
     try {
-      logger()->info('Début streamConversation', [
-        'model' => $model,
-        'temperature' => $temperature,
-      ]);
-
       $models = collect($this->getModels());
-      if (!$model || !$models->contains('id', $model)) {
-        $model = self::DEFAULT_MODEL;
-        logger()->info('Modèle par défaut utilisé:', ['model' => $model]);
-      }
+      $selectedModel = $models->firstWhere('id', $model) ?? $models->first();
 
-      // Récupérer le système prompt en tenant compte de la conversation
-      $systemPrompt = $this->getChatSystemPrompt($conversation);
-      $messages = [$systemPrompt, ...$messages];
+      // Vérifier si le modèle supporte les images
+      $supportsImages = $selectedModel['supports_image'] ?? false;
 
-      // Méthode "createStreamed" qui renvoie un flux "StreamResponse"
+      // Préparer les messages pour l'API
+      $formattedMessages = array_map(function ($message) use ($supportsImages) {
+        if ($message['role'] === 'user' && $supportsImages) {
+          // Si le contenu est un JSON valide, on suppose que c'est un message multimodal
+          $content = is_string($message['content']) ? json_decode($message['content'], true) : $message['content'];
+          if (json_last_error() === JSON_ERROR_NONE) {
+            return [
+              'role' => $message['role'],
+              'content' => $content
+            ];
+          }
+        }
+        return $message;
+      }, $messages);
+
       return $this->client->chat()->createStreamed([
-        'model' => $model,
-        'messages' => $messages,
+        'model' => $model ?? self::DEFAULT_MODEL,
+        'messages' => $formattedMessages,
         'temperature' => $temperature,
       ]);
     } catch (\Exception $e) {
