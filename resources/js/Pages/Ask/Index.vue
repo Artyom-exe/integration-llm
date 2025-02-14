@@ -222,8 +222,8 @@ const setupWebSocket = async (conversationId) => {
 };
 
 // Ajouter un message
-const addMessage = (role, content) => {
-  const message = { role, content };
+const addMessage = (role, content, image = null) => {
+  const message = { role, content, image };
   messages.value.push(message);
   nextTick(() => {
     chatContainer.value?.scrollTo({
@@ -301,16 +301,24 @@ onBeforeUnmount(async () => {
 
 // Envoyer un message
 const sendMessage = async () => {
-  addMessage("user", form.message);
-  addMessage("assistant", ""); // Message vide qui sera mis à jour par le stream
+  const formData = new FormData();
+  formData.append('message', form.message);
+  formData.append('model', form.model);
+
+  if (imageFile.value) {
+    formData.append('image', imageFile.value);
+  }
+
+  addMessage("user", form.message, previewImage.value);
+  addMessage("assistant", "");
   isLoading.value = true;
 
   try {
-    await axios.post(`/conversations/${activeConversationId.value}/messages`, {
-      message: form.message,
-      model: form.model,
+    await axios.post(`/conversations/${activeConversationId.value}/messages`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     });
     form.message = "";
+    clearImage();
   } catch (error) {
     messages.value.pop();
     addMessage("assistant", "Une erreur est survenue. Veuillez réessayer.");
@@ -387,6 +395,21 @@ function adjustHeight(event) {
   textarea.style.height = `${textarea.scrollHeight}px`; // Ajustement dynamique.
 }
 
+const imageFile = ref(null);
+const previewImage = ref(null);
+
+const handleImageSelect = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    imageFile.value = file;
+    previewImage.value = URL.createObjectURL(file);
+  }
+};
+
+const clearImage = () => {
+  imageFile.value = null;
+  previewImage.value = null;
+};
 
 </script>
 
@@ -464,6 +487,20 @@ function adjustHeight(event) {
           <div class="w-2/3 max-w-2xl">
             <form @submit.prevent="submitForm" class="flex flex-col items-center">
               <div class="w-full bg-gray-700 rounded-3xl">
+                <!-- Prévisualisation de l'image -->
+                <div v-if="previewImage" class="p-2">
+                  <div class="relative">
+                    <img :src="previewImage" class="max-h-40 rounded" />
+                    <button
+                      @click="clearImage"
+                      class="absolute top-1 right-1 bg-red-500 rounded-full p-1"
+                    >
+                      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
                 <textarea
                   v-model="form.message"
                   placeholder="Posez votre question..."
@@ -471,7 +508,19 @@ function adjustHeight(event) {
                   @input="adjustHeight($event)"
                   @keydown.enter.prevent="submitForm"
                 ></textarea>
-                <div class="bg-gray-700 text-white rounded-b-3xl flex justify-end px-2 py-2">
+                <div class="bg-gray-700 text-white rounded-b-3xl flex justify-between items-center px-2 py-2">
+                  <!-- Bouton d'upload -->
+                  <label class="cursor-pointer text-gray-400 hover:text-white">
+                    <input
+                      type="file"
+                      class="hidden"
+                      accept="image/*"
+                      @change="handleImageSelect"
+                    >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </label>
                   <button
                     type="submit"
                     class="bg-blue-500 text-white w-8 h-8 hover:bg-blue-600 transition rounded-full flex items-center justify-center"
@@ -538,6 +587,20 @@ function adjustHeight(event) {
         <div class="p-6 pt-0 bg-gray-900 justify-center flex">
           <form @submit.prevent="submitForm" class="flex items-center space-x-4 w-full justify-center">
             <div class="w-3/6 bg-gray-700 rounded-3xl">
+              <!-- Prévisualisation de l'image -->
+              <div v-if="previewImage" class="p-2">
+                <div class="relative">
+                  <img :src="previewImage" class="max-h-40 rounded" />
+                  <button
+                    @click="clearImage"
+                    class="absolute top-1 right-1 bg-red-500 rounded-full p-1"
+                  >
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
               <textarea
                 v-model="form.message"
                 placeholder="Message AI Nexus..."
@@ -545,7 +608,19 @@ function adjustHeight(event) {
                 @input="adjustHeight($event)"
                 @keydown.enter.prevent="submitForm"
               ></textarea>
-              <div class="bg-gray-700 text-white rounded-b-3xl flex justify-end px-2 py-2">
+              <div class="bg-gray-700 text-white rounded-b-3xl flex justify-between items-center px-2 py-2">
+                <!-- Bouton d'upload -->
+                <label class="cursor-pointer text-gray-400 hover:text-white">
+                  <input
+                    type="file"
+                    class="hidden"
+                    accept="image/*"
+                    @change="handleImageSelect"
+                  >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </label>
                 <button
                   type="submit"
                   class="bg-blue-500 text-white w-8 h-8 hover:bg-blue-600 transition rounded-full flex items-center justify-center"
