@@ -302,6 +302,7 @@ onMounted(() => {
   // Au lieu de chercher une conversation existante, on en crée une nouvelle
   createNewConversation(false);
   listenForNewConversations();
+  loadCommands(); // Charger les commandes au montage
 });
 
 // Amélioration du nettoyage lors du démontage
@@ -338,6 +339,11 @@ const sendMessage = async () => {
 // Envoyer le formulaire
 const submitForm = () => {
   if (!form.message.trim()) return;
+
+  // Vérifier si c'est une commande avant d'envoyer
+  if (handleCommand(form.message)) {
+    return;
+  }
 
   if (!activeConversationId.value) {
     createNewConversation(true); // true indique qu'on a un message à envoyer
@@ -435,6 +441,33 @@ const deleteConversation = async (conversationId, event) => {
     }
   } catch (error) {
     console.error('Erreur lors de la suppression:', error);
+  }
+};
+
+const handleCommand = (message) => {
+  // Vérifie si le message commence par "/"
+  if (message.startsWith('/')) {
+    const command = message.split(' ')[0].toLowerCase(); // Récupère la commande
+
+    // Si c'est une commande valide, on l'envoie directement
+    if (commands.value.some(cmd => cmd.trigger === command)) {
+      form.message = message;
+      submitForm();
+      return true;
+    }
+  }
+  return false;
+};
+
+const commands = ref([]); // Pour stocker les commandes de l'utilisateur
+
+// Fonction pour charger les commandes au montage du composant
+const loadCommands = async () => {
+  try {
+    const response = await axios.get('/custom-instructions');
+    commands.value = response.data.commands || [];
+  } catch (error) {
+    console.error('Erreur lors du chargement des commandes:', error);
   }
 };
 
@@ -729,6 +762,20 @@ const deleteConversation = async (conversationId, event) => {
         </div>
       </template>
     </div>
+
+    <!-- Ajouter un indicateur de commandes disponibles sous la zone de saisie -->
+    <div v-if="commands.length > 0"
+         class="absolute bottom-20 left-0 right-0 px-4 py-2 bg-gray-800 text-xs text-gray-400">
+      <p class="mb-1">Commandes disponibles:</p>
+      <div class="flex flex-wrap gap-2">
+        <span v-for="cmd in commands"
+              :key="cmd.trigger"
+              class="inline-flex items-center bg-gray-700 rounded px-2 py-1">
+          {{ cmd.trigger }} - {{ cmd.description }}
+        </span>
+      </div>
+    </div>
+
   </div>
 
   <CustomInstructionsModal
