@@ -458,7 +458,10 @@ const deleteConversation = async (conversationId, event) => {
     >
       <!-- En-tête du menu -->
       <div class="flex items-center justify-between p-4 border-b border-gray-700">
-        <h1 class="text-lg font-bold">AI Nexus</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="text-lg font-bold">AI Nexus</h1>
+          <img src="@/../../public/build/images/logo.svg" alt="Logo" class="w-5 h-5" />
+        </div>
         <button
           class="md:hidden text-gray-400 hover:text-white"
           @click="closeMobileMenu"
