@@ -10,7 +10,7 @@ class ChatService
   private $baseUrl;
   private $apiKey;
   private $client;
-  public const DEFAULT_MODEL = 'deepseek/deepseek-r1';
+  public const DEFAULT_MODEL = 'openai/chatgpt-4o-latest';
 
   public function __construct()
   {
