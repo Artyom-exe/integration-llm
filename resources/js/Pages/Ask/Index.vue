@@ -35,6 +35,13 @@ const form = useForm({
   model: props.selectedModel || props.models[0]?.id || "",
 });
 
+// Ajouter un watcher pour s'assurer que le modèle est toujours défini
+watch(() => props.selectedModel, (newValue) => {
+  if (newValue && !form.model) {
+    form.model = newValue;
+  }
+}, { immediate: true });
+
 const conversations = ref([...props.conversations]);
 const messages = ref([]);
 const activeConversationId = ref(null);
@@ -536,7 +543,7 @@ const deleteConversation = async (conversationId, event) => {
         <div class="flex items-center gap-4">
           <select
             v-model="form.model"
-            class="bg-gray-900 text-white text-xs rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800"
+            class="bg-gray-900 text-white text-xs rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800"
           >
             <option v-for="model in models" :key="model.id" :value="model.id">
               {{ model.name }}
@@ -558,7 +565,7 @@ const deleteConversation = async (conversationId, event) => {
       <header class="bg-gray-900 p-4 hidden md:flex items-center justify-between">
         <select
           v-model="form.model"
-          class="bg-gray-900 text-white text-sm rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800"
+          class="bg-gray-900 text-white text-sm rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800"
         >
           <option v-for="model in models" :key="model.id" :value="model.id">
             {{ model.name }}
