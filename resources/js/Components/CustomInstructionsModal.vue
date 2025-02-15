@@ -91,7 +91,7 @@ const saveInstruction = async () => {
 const editInstruction = (instruction) => {
     newInstruction.value = { ...instruction }; // Copier toutes les propriétés, y compris l'ID
     isEditing.value = true;
-    currentTab.value = 'form';
+    currentTab.value = 'new-instruction'; // Changer pour 'new-instruction' au lieu de 'form'
 };
 
 const resetForm = () => {
@@ -267,8 +267,9 @@ const switchTab = (tab) => {
 </script>
 
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-gray-800 p-6 rounded-lg w-[800px] max-h-[80vh] overflow-y-auto">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ">
+    <div
+      class="bg-gray-800 p-6 rounded-lg w-[800px] max-h-[80vh] overflow-y-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
       <!-- Header -->
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl text-white">Instructions personnalisées</h2>
@@ -281,25 +282,16 @@ const switchTab = (tab) => {
 
       <!-- Onglets -->
       <div class="flex mb-4 border-b border-gray-700">
-        <button
-          @click="switchTab('list')"
-          :class="['px-4 py-2 text-sm font-medium',
-            currentTab === 'list' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400']"
-        >
+        <button @click="switchTab('list')" :class="['px-4 py-2 text-sm font-medium',
+            currentTab === 'list' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400']">
           Liste
         </button>
-        <button
-          @click="switchTab('new-instruction')"
-          :class="['px-4 py-2 text-sm font-medium',
-            currentTab === 'new-instruction' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400']"
-        >
+        <button @click="switchTab('new-instruction')" :class="['px-4 py-2 text-sm font-medium',
+            currentTab === 'new-instruction' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400']">
           Nouvelle instruction
         </button>
-        <button
-          @click="switchTab('new-command')"
-          :class="['px-4 py-2 text-sm font-medium',
-            currentTab === 'new-command' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400']"
-        >
+        <button @click="switchTab('new-command')" :class="['px-4 py-2 text-sm font-medium',
+            currentTab === 'new-command' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400']">
           Nouvelle commande
         </button>
       </div>
@@ -309,24 +301,21 @@ const switchTab = (tab) => {
         <!-- Section Instructions -->
         <div class="mb-8">
           <h3 class="text-lg font-medium text-white mb-4">Instructions</h3>
-          <div v-for="instruction in instructions.filter(i => i.type !== 'command')"
-               :key="instruction.id"
-               class="bg-gray-700 p-4 rounded-lg mb-3">
+          <div v-for="instruction in instructions.filter(i => i.type !== 'command')" :key="instruction.id"
+            class="bg-gray-700 p-4 rounded-lg mb-3">
             <div class="flex justify-between items-start mb-2">
               <h3 class="text-white font-medium">{{ instruction.title }}</h3>
               <div class="flex space-x-2">
-                <button @click="editInstruction(instruction)"
-                        class="text-blue-400 hover:text-blue-300">
+                <button @click="editInstruction(instruction)" class="text-blue-400 hover:text-blue-300">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
-                <button @click="deleteInstruction(instruction.id)"
-                        class="text-red-400 hover:text-red-300">
+                <button @click="deleteInstruction(instruction.id)" class="text-red-400 hover:text-red-300">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
               </div>
@@ -342,9 +331,7 @@ const switchTab = (tab) => {
         <!-- Section Commandes -->
         <div>
           <h3 class="text-lg font-medium text-white mb-4">Commandes</h3>
-          <div v-for="command in commands"
-               :key="command.id"
-               class="bg-gray-700 p-4 rounded-lg mb-3">
+          <div v-for="command in commands" :key="command.id" class="bg-gray-700 p-4 rounded-lg mb-3">
             <div class="flex justify-between items-start mb-2">
               <div>
                 <h3 class="text-white font-medium">{{ command.trigger }}</h3>
@@ -353,23 +340,17 @@ const switchTab = (tab) => {
               </div>
               <div class="flex space-x-2">
                 <!-- Bouton éditer -->
-                <button
-                  @click="editCommand(command)"
-                  class="text-blue-400 hover:text-blue-300"
-                >
+                <button @click="editCommand(command)" class="text-blue-400 hover:text-blue-300">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
                 <!-- Bouton supprimer -->
-                <button
-                  @click="deleteCommand(command.id)"
-                  class="text-red-400 hover:text-red-500"
-                >
+                <button @click="deleteCommand(command.id)" class="text-red-400 hover:text-red-500">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
               </div>
@@ -381,105 +362,76 @@ const switchTab = (tab) => {
       <!-- Formulaire nouvelle instruction -->
       <div v-if="currentTab === 'new-instruction'" class="space-y-4">
         <div>
-            <label class="block text-white mb-2">Titre</label>
-            <input v-model="newInstruction.title"
-                   type="text"
-                   class="w-full bg-gray-700 text-white rounded-lg p-2">
-          </div>
+          <label class="block text-white mb-2">
+            {{ isEditing ? 'Modifier l\'instruction' : 'Nouvelle instruction' }}
+          </label>
+          <input v-model="newInstruction.title" type="text" class="w-full bg-gray-700 text-white rounded-lg p-2">
+        </div>
 
+        <div>
+          <label class="block text-white mb-2">Type</label>
+          <select v-model="newInstruction.type" class="w-full bg-gray-700 text-white rounded-lg p-2">
+            <option v-for="type in instructionTypes" :key="type.value" :value="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-white mb-2">Contenu</label>
+          <textarea v-model="newInstruction.content" rows="6" class="w-full bg-gray-700 text-white rounded-lg p-2"
+            placeholder="Écrivez votre instruction personnalisée ici..."></textarea>
+        </div>
+
+        <div class="flex items-center space-x-4">
           <div>
-            <label class="block text-white mb-2">Type</label>
-            <select v-model="newInstruction.type"
-                    class="w-full bg-gray-700 text-white rounded-lg p-2">
-              <option v-for="type in instructionTypes"
-                      :key="type.value"
-                      :value="type.value">
-                {{ type.label }}
-              </option>
-            </select>
+            <label class="block text-white mb-2">Priorité</label>
+            <input v-model="newInstruction.priority" type="number" class="w-20 bg-gray-700 text-white rounded-lg p-2">
           </div>
+          <div class="flex items-center">
+            <input v-model="newInstruction.is_active" type="checkbox" class="mr-2">
+            <span class="text-white">Actif</span>
+          </div>
+        </div>
 
-          <div>
-            <label class="block text-white mb-2">Contenu</label>
-            <textarea v-model="newInstruction.content"
-                      rows="6"
-                      class="w-full bg-gray-700 text-white rounded-lg p-2"
-                      placeholder="Écrivez votre instruction personnalisée ici..."></textarea>
-          </div>
-
-          <div class="flex items-center space-x-4">
-            <div>
-              <label class="block text-white mb-2">Priorité</label>
-              <input v-model="newInstruction.priority"
-                     type="number"
-                     class="w-20 bg-gray-700 text-white rounded-lg p-2">
-            </div>
-            <div class="flex items-center">
-              <input v-model="newInstruction.is_active"
-                     type="checkbox"
-                     class="mr-2">
-              <span class="text-white">Actif</span>
-            </div>
-          </div>
-
-          <div class="flex justify-end space-x-4 mt-6">
-            <button @click="currentTab = 'list'"
-                    class="px-4 py-2 text-gray-400 hover:text-white">
-              Annuler
-            </button>
-            <button @click="saveInstruction"
-                    class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-              {{ isEditing ? 'Mettre à jour' : 'Créer' }}
-            </button>
-          </div>
+        <div class="flex justify-end space-x-4 mt-6">
+          <button @click="currentTab = 'list'" class="px-4 py-2 text-gray-400 hover:text-white">
+            Annuler
+          </button>
+          <button @click="saveInstruction" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+            {{ isEditing ? 'Mettre à jour' : 'Créer' }}
+          </button>
+        </div>
       </div>
 
       <!-- Formulaire nouvelle commande -->
       <div v-if="currentTab === 'new-command'" class="space-y-4">
         <div>
-            <label class="block text-white mb-2">Commande</label>
-            <input
-              v-model="commandForm.trigger"
-              type="text"
-              placeholder="/commande"
-              class="w-full bg-gray-700 text-white rounded-lg p-2"
-            />
-          </div>
+          <label class="block text-white mb-2">Commande</label>
+          <input v-model="commandForm.trigger" type="text" placeholder="/commande"
+            class="w-full bg-gray-700 text-white rounded-lg p-2" />
+        </div>
 
-          <div>
-            <label class="block text-white mb-2">Description</label>
-            <input
-              v-model="commandForm.description"
-              type="text"
-              placeholder="Description de la commande"
-              class="w-full bg-gray-700 text-white rounded-lg p-2"
-            />
-          </div>
+        <div>
+          <label class="block text-white mb-2">Description</label>
+          <input v-model="commandForm.description" type="text" placeholder="Description de la commande"
+            class="w-full bg-gray-700 text-white rounded-lg p-2" />
+        </div>
 
-          <div>
-            <label class="block text-white mb-2">Action</label>
-            <textarea
-              v-model="commandForm.content"
-              rows="6"
-              class="w-full bg-gray-700 text-white rounded-lg p-2"
-              placeholder="Action à effectuer quand la commande est utilisée..."
-            ></textarea>
-          </div>
+        <div>
+          <label class="block text-white mb-2">Action</label>
+          <textarea v-model="commandForm.content" rows="6" class="w-full bg-gray-700 text-white rounded-lg p-2"
+            placeholder="Action à effectuer quand la commande est utilisée..."></textarea>
+        </div>
 
-          <div class="flex justify-end space-x-4 mt-6">
-            <button
-              @click="currentTab = 'list'"
-              class="px-4 py-2 text-gray-400 hover:text-white"
-            >
-              Annuler
-            </button>
-            <button
-              @click="addCommand"
-              class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              {{ isEditing ? 'Mettre à jour' : 'Ajouter' }}
-            </button>
-          </div>
+        <div class="flex justify-end space-x-4 mt-6">
+          <button @click="currentTab = 'list'" class="px-4 py-2 text-gray-400 hover:text-white">
+            Annuler
+          </button>
+          <button @click="addCommand" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+            {{ isEditing ? 'Mettre à jour' : 'Ajouter' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
