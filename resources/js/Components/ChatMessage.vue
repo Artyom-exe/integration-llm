@@ -19,7 +19,7 @@ const props = defineProps({
     <!-- Message utilisateur : Aligné à droite -->
     <div v-if="message.role === 'user'" class="bg-gray-700 text-white px-4 py-2 rounded-lg ml-auto"
       aria-label="Message utilisateur">
-      {{ message.content }}
+      {{ message.display_content || message.content }}
     </div>
 
     <!-- Message IA : Aligné à gauche et rendu en Markdown avec surlignage syntaxique -->
