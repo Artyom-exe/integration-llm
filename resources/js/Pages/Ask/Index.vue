@@ -397,6 +397,32 @@ const logout = () => {
   });
 };
 
+// Ajouter la fonction de suppression
+const deleteConversation = async (conversationId, event) => {
+  // Empêcher la propagation pour éviter la sélection de la conversation
+  event.stopPropagation();
+
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette conversation ?')) {
+    return;
+  }
+
+  try {
+    await axios.delete(`/conversations/${conversationId}`);
+
+    // Retirer la conversation de la liste
+    conversations.value = conversations.value.filter(c => c.id !== conversationId);
+    filteredConversations.value = filterConversations(searchQuery.value);
+
+    // Si c'était la conversation active, réinitialiser
+    if (activeConversationId.value === conversationId) {
+      activeConversationId.value = null;
+      messages.value = [];
+    }
+  } catch (error) {
+    console.error('Erreur lors de la suppression:', error);
+  }
+};
+
 </script>
 
 <template>
@@ -426,13 +452,26 @@ const logout = () => {
         <li
           v-for="conversation in filteredConversations"
           :key="conversation.id"
-          :class="[ 'px-4 py-3 cursor-pointer hover:bg-gray-700', activeConversationId === conversation.id ? 'bg-gray-700' : '' ]"
+          :class="[ 'px-4 py-3 cursor-pointer hover:bg-gray-700 group', activeConversationId === conversation.id ? 'bg-gray-700' : '' ]"
           @click="selectConversation(conversation.id)"
         >
-          <h3 class="text-white text-sm text">{{ conversation.title || "Nouvelle conversation" }}</h3>
-          <p class="text-xs text-gray-400">
-            {{ new Date(conversation.updated_at).toLocaleString() }}
-          </p>
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-white text-sm text">{{ conversation.title || "Nouvelle conversation" }}</h3>
+              <p class="text-xs text-gray-400">
+                {{ new Date(conversation.updated_at).toLocaleString() }}
+              </p>
+            </div>
+            <!-- Bouton de suppression -->
+            <button
+              @click="deleteConversation(conversation.id, $event)"
+              class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
         </li>
       </ul>
     </aside>
