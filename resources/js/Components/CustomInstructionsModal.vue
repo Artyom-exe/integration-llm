@@ -157,7 +157,7 @@ const addCommand = async () => {
   try {
     // Construction du contenu formaté pour la commande
     const formattedCommand = {
-      title: commandForm.value.trigger, // Utiliser le trigger comme titre
+      title: commandForm.value.trigger,
       content: JSON.stringify({
         trigger: commandForm.value.trigger.startsWith('/')
           ? commandForm.value.trigger
@@ -170,7 +170,22 @@ const addCommand = async () => {
       is_active: commandForm.value.is_active
     };
 
-    await axios.post('/custom-instructions', formattedCommand);
+    const response = await axios.post('/custom-instructions', formattedCommand);
+
+    // Ajouter la nouvelle commande directement dans la liste
+    const newCommand = {
+      id: response.data.id,
+      trigger: commandForm.value.trigger.startsWith('/')
+        ? commandForm.value.trigger
+        : '/' + commandForm.value.trigger,
+      description: commandForm.value.description,
+      action: commandForm.value.content
+    };
+
+    commands.value.push(newCommand);
+
+    // Ajouter également aux instructions
+    instructions.value.push(response.data);
 
     // Réinitialiser le formulaire
     commandForm.value = {
@@ -183,8 +198,8 @@ const addCommand = async () => {
       is_active: true
     };
 
-    // Recharger les commandes
-    await loadInstructions();
+    // Retourner à la liste
+    currentTab.value = 'list';
   } catch (error) {
     console.error('Erreur lors de l\'ajout de la commande:', error);
     alert('Erreur lors de l\'ajout de la commande: ' + (error.response?.data?.message || error.message));
