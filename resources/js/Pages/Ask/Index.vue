@@ -494,7 +494,6 @@ const deleteConversation = async (conversationId, event) => {
       <div class="flex items-center gap-4">
         <!-- Bouton des paramètres -->
         <button
-          v-if="activeConversationId"
           @click="showInstructionsModal = true"
           class="text-gray-400 hover:text-white"
         >
