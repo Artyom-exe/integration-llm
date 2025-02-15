@@ -54,9 +54,10 @@ class ConversationController extends Controller
       ->where('user_id', auth()->id())
       ->firstOrFail();
 
+    $conversation->messages()->delete(); // Supprimer d'abord les messages
     $conversation->delete();
 
-    return response()->json(['message' => 'Conversation supprimée.'], 200);
+    return response()->json(['message' => 'Conversation supprimée avec succès']);
   }
 
   // Charger les conversations
