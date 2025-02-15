@@ -16,6 +16,7 @@ class AskController extends Controller
       ->delete();
 
     $chatService = new ChatService();
+    $models = $chatService->getModels();
 
     // Ne récupérer que les conversations permanentes
     $conversations = Conversation::where('user_id', auth()->id())
@@ -26,8 +27,8 @@ class AskController extends Controller
 
     return Inertia::render('Ask/Index', [
       'conversations' => $conversations,
-      'models' => $chatService->getModels(),
-      'selectedModel' => auth()->user()->last_used_model
+      'models' => $models,
+      'selectedModel' => ChatService::DEFAULT_MODEL // Ajout du modèle par défaut
     ]);
   }
 }
