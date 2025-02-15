@@ -155,7 +155,6 @@ const loadCommands = async () => {
 // Ajouter une nouvelle commande
 const addCommand = async () => {
   try {
-    // Construction du contenu formaté pour la commande
     const formattedCommand = {
       title: commandForm.value.trigger,
       content: JSON.stringify({
@@ -170,24 +169,35 @@ const addCommand = async () => {
       is_active: commandForm.value.is_active
     };
 
-    const response = await axios.post('/custom-instructions', formattedCommand);
+    let response;
+    if (isEditing.value) {
+      response = await axios.put(`/custom-instructions/${commandForm.value.id}`, formattedCommand);
+      // Mettre à jour la commande dans la liste
+      const index = commands.value.findIndex(c => c.id === commandForm.value.id);
+      if (index !== -1) {
+        commands.value[index] = {
+          id: response.data.id,
+          trigger: commandForm.value.trigger.startsWith('/')
+            ? commandForm.value.trigger
+            : '/' + commandForm.value.trigger,
+          description: commandForm.value.description,
+          action: commandForm.value.content
+        };
+      }
+    } else {
+      response = await axios.post('/custom-instructions', formattedCommand);
+      // Ajouter la nouvelle commande à la liste
+      commands.value.push({
+        id: response.data.id,
+        trigger: commandForm.value.trigger.startsWith('/')
+          ? commandForm.value.trigger
+          : '/' + commandForm.value.trigger,
+        description: commandForm.value.description,
+        action: commandForm.value.content
+      });
+    }
 
-    // Ajouter la nouvelle commande directement dans la liste
-    const newCommand = {
-      id: response.data.id,
-      trigger: commandForm.value.trigger.startsWith('/')
-        ? commandForm.value.trigger
-        : '/' + commandForm.value.trigger,
-      description: commandForm.value.description,
-      action: commandForm.value.content
-    };
-
-    commands.value.push(newCommand);
-
-    // Ajouter également aux instructions
-    instructions.value.push(response.data);
-
-    // Réinitialiser le formulaire
+    // Réinitialiser le formulaire et l'état
     commandForm.value = {
       title: '',
       content: '',
@@ -197,12 +207,11 @@ const addCommand = async () => {
       priority: 0,
       is_active: true
     };
-
-    // Retourner à la liste
+    isEditing.value = false;
     currentTab.value = 'list';
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la commande:', error);
-    alert('Erreur lors de l\'ajout de la commande: ' + (error.response?.data?.message || error.message));
+    console.error('Erreur lors de l\'opération sur la commande:', error);
+    alert('Erreur lors de l\'opération sur la commande: ' + (error.response?.data?.message || error.message));
   }
 };
 
@@ -218,6 +227,24 @@ const deleteCommand = async (commandId) => {
     console.error('Erreur lors de la suppression de la commande:', error);
     alert('Erreur lors de la suppression de la commande: ' + (error.response?.data?.message || error.message));
   }
+};
+
+// Ajout de la fonction d'édition pour les commandes
+const editCommand = (command) => {
+  // Remplir le formulaire avec les données de la commande
+  commandForm.value = {
+    title: command.trigger,
+    trigger: command.trigger,
+    description: command.description,
+    content: command.action,
+    type: 'command',
+    priority: 0,
+    is_active: true,
+    id: command.id // Ajouter l'ID pour l'édition
+  };
+
+  isEditing.value = true;
+  currentTab.value = 'new-command';
 };
 
 // Remplacer les deux versions de switchTab par celle-ci
@@ -324,15 +351,28 @@ const switchTab = (tab) => {
                 <p class="text-sm text-gray-300">{{ command.description }}</p>
                 <p class="text-xs text-gray-400 mt-2">Action: {{ command.action }}</p>
               </div>
-              <button
-                @click="deleteCommand(command.id)"
-                class="text-red-400 hover:text-red-500"
-              >
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+              <div class="flex space-x-2">
+                <!-- Bouton éditer -->
+                <button
+                  @click="editCommand(command)"
+                  class="text-blue-400 hover:text-blue-300"
+                >
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <!-- Bouton supprimer -->
+                <button
+                  @click="deleteCommand(command.id)"
+                  class="text-red-400 hover:text-red-500"
+                >
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -437,7 +477,7 @@ const switchTab = (tab) => {
               @click="addCommand"
               class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
             >
-              Ajouter
+              {{ isEditing ? 'Mettre à jour' : 'Ajouter' }}
             </button>
           </div>
       </div>
