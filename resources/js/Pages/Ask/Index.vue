@@ -53,6 +53,14 @@ const maxReconnectAttempts = 5; // Augmenté à 5 tentatives
 // Ajouter un état pour suivre les connexions tentées
 const attemptedConnections = ref(new Set());
 
+// Ajouter l'état pour le menu mobile
+const isMobileMenuOpen = ref(false);
+
+// Fonction pour fermer le menu mobile
+const closeMobileMenu = () => {
+  isMobileMenuOpen.value = false;
+};
+
 // Fonction de nettoyage du WebSocket améliorée
 const cleanupWebSocket = async () => {
   try {
@@ -426,10 +434,33 @@ const deleteConversation = async (conversationId, event) => {
 </script>
 
 <template>
-
   <div class="flex h-screen bg-gray-900 text-white">
-    <!-- Sidebar -->
-    <aside class=" min-w-60 max-w-60 bg-gray-800 border-r border-gray-700 flex flex-col">
+    <!-- Menu mobile -->
+    <div
+      v-if="isMobileMenuOpen"
+      class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+      @click="closeMobileMenu"
+    ></div>
+
+    <!-- Sidebar (mobile & desktop) -->
+    <aside
+      :class="[
+        'fixed md:relative w-full md:w-60 bg-gray-800 h-screen border-r border-gray-700 flex flex-col z-50 transition-transform duration-300 ease-in-out',
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      ]"
+    >
+      <!-- En-tête du menu -->
+      <div class="flex items-center justify-between p-4 border-b border-gray-700">
+        <h1 class="text-lg font-bold">AI Nexus</h1>
+        <button
+          class="md:hidden text-gray-400 hover:text-white"
+          @click="closeMobileMenu"
+        >
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
       <!-- Recherche -->
       <div class="p-4">
@@ -441,13 +472,13 @@ const deleteConversation = async (conversationId, event) => {
         />
         <button
           @click="createNewConversation(false)"
-          class="w-full text-xs  bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition"
+          class="w-full text-xs bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition"
         >
           AI Nexus
         </button>
       </div>
 
-      <!-- Liste des conversations -->
+      <!-- Liste des conversations (modifiée pour prendre toute la hauteur en mobile) -->
       <ul class="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
         <li
           v-for="conversation in filteredConversations"
@@ -474,25 +505,65 @@ const deleteConversation = async (conversationId, event) => {
           </div>
         </li>
       </ul>
+
+      <!-- Menu du bas -->
+      <div class="border-t border-gray-700 p-4">
+        <!-- Boutons du menu du bas -->
+        <button
+          @click="logout"
+          class="w-full flex items-center gap-2 text-gray-400 hover:text-white text-sm py-2"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span>Déconnexion</span>
+        </button>
+      </div>
     </aside>
 
     <!-- Chat -->
     <div class="flex flex-col flex-grow">
+      <!-- Header mobile -->
+      <header class="bg-gray-900 p-4 flex items-center justify-between md:hidden">
+        <button
+          @click="isMobileMenuOpen = true"
+          class="text-gray-400 hover:text-white"
+        >
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <div class="flex items-center gap-4">
+          <select
+            v-model="form.model"
+            class="bg-gray-900 text-white text-xs rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800"
+          >
+            <option v-for="model in models" :key="model.id" :value="model.id">
+              {{ model.name }}
+            </option>
+          </select>
+          <button
+            @click="showInstructionsModal = true"
+            class="text-gray-400 hover:text-white"
+          >
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+      </header>
 
-    <header class="bg-gray-900 p-4 flex items-center justify-between">
-      <!-- Sélecteur de modèle -->
-      <select
-        v-model="form.model"
-        class="bg-gray-900 text-white text-sm rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800"
-      >
-        <option v-for="model in models" :key="model.id" :value="model.id" class="text-xs">
-          {{ model.name }}
-        </option>
-      </select>
-
-      <!-- Actions groupées -->
-      <div class="flex items-center gap-4">
-        <!-- Bouton des paramètres -->
+      <!-- Header desktop -->
+      <header class="bg-gray-900 p-4 hidden md:flex items-center justify-between">
+        <select
+          v-model="form.model"
+          class="bg-gray-900 text-white text-sm rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800"
+        >
+          <option v-for="model in models" :key="model.id" :value="model.id">
+            {{ model.name }}
+          </option>
+        </select>
         <button
           @click="showInstructionsModal = true"
           class="text-gray-400 hover:text-white"
@@ -502,28 +573,15 @@ const deleteConversation = async (conversationId, event) => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </button>
-
-        <!-- Bouton de déconnexion -->
-        <button
-          @click="logout"
-          class="text-gray-400 hover:text-white flex items-center gap-2 text-sm"
-        >
-          <span>Déconnexion</span>
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-        </button>
-      </div>
-    </header>
+      </header>
 
       <!-- Zone principale conditionnelle -->
       <template v-if="!activeConversationId || isEmptyConversation">
-        <!-- Vue initiale centrée -->
-        <div class="flex-grow flex flex-col items-center justify-center">
-          <h2 class="text-2xl font-light text-gray-300 mb-8">
+        <div class="flex-grow flex flex-col items-center justify-center p-4">
+          <h2 class="text-xl md:text-2xl font-light text-gray-300 mb-4 md:mb-8 text-center">
             Que puis-je faire pour vous ?
           </h2>
-          <div class="w-2/3 max-w-2xl">
+          <div class="w-full md:w-2/3 max-w-2xl px-4">
             <form @submit.prevent="submitForm" class="flex flex-col items-center">
               <div class="w-full bg-gray-700 rounded-3xl">
                 <textarea
@@ -589,7 +647,7 @@ const deleteConversation = async (conversationId, event) => {
 
       <template v-else>
         <!-- Vue normale avec les messages -->
-        <div ref="chatContainer" class="flex-grow overflow-y-auto p-6 flex flex-col items-center bg-gray-900 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
+        <div ref="chatContainer" class="flex-grow overflow-y-auto p-3 md:p-6 flex flex-col items-center bg-gray-900 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
           <ChatMessage
             v-for="(message, index) in messages"
             :key="index"
@@ -598,9 +656,9 @@ const deleteConversation = async (conversationId, event) => {
         </div>
 
         <!-- Zone de saisie normale -->
-        <div class="p-6 pt-0 bg-gray-900 justify-center flex">
+        <div class="p-3 md:p-6 pt-0 bg-gray-900 justify-center flex">
           <form @submit.prevent="submitForm" class="flex items-center space-x-4 w-full justify-center">
-            <div class="w-3/6 bg-gray-700 rounded-3xl">
+            <div class="w-full md:w-3/6 bg-gray-700 rounded-3xl">
               <textarea
                 v-model="form.message"
                 placeholder="Message AI Nexus..."
@@ -660,7 +718,6 @@ const deleteConversation = async (conversationId, event) => {
           </form>
         </div>
       </template>
-
     </div>
   </div>
 
@@ -670,5 +727,4 @@ const deleteConversation = async (conversationId, event) => {
     @close="showInstructionsModal = false"
     @update="selectConversation(activeConversationId)"
   />
-
 </template>
