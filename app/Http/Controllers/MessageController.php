@@ -24,9 +24,22 @@ class MessageController extends Controller
     ]);
 
     try {
+      // Décoder le message si c'est du JSON
+      $messageText = $request->input('message');
+      if (str_starts_with($messageText, '[')) {
+        try {
+          $decoded = json_decode($messageText, true);
+          if (is_array($decoded) && isset($decoded[0]['text'])) {
+            $messageText = $decoded[0]['text'];
+          }
+        } catch (\Exception $e) {
+          // Garder le message original si le décodage échoue
+        }
+      }
+
       // Traitement de l'image si présente
       $messageContent = [
-        ['type' => 'text', 'text' => $request->input('message')]
+        ['type' => 'text', 'text' => $messageText]
       ];
 
       if ($request->hasFile('image')) {
@@ -58,7 +71,7 @@ class MessageController extends Controller
         ->get()
         ->map(fn($msg) => [
           'role'    => $msg->role,
-          'content' => $msg->content,
+          'content' => $msg->display_content, // Utiliser display_content au lieu de content
         ])
         ->toArray();
 
