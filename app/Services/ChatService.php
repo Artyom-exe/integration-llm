@@ -10,7 +10,7 @@ class ChatService
   private $baseUrl;
   private $apiKey;
   private $client;
-  public const DEFAULT_MODEL = 'meta-llama/llama-3.2-11b-vision-instruct:free';
+  public const DEFAULT_MODEL = 'deepseek/deepseek-r1';
 
   public function __construct()
   {
@@ -27,9 +27,9 @@ class ChatService
       ])->get($this->baseUrl . '/models');
 
       return collect($response->json()['data'])
-        ->filter(function ($model) {
-          return str_ends_with($model['id'], ':free');
-        })
+        // ->filter(function ($model) {
+        //   return str_ends_with($model['id'], ':free');
+        // })
         ->sortBy('name')
         ->map(function ($model) {
           return [
