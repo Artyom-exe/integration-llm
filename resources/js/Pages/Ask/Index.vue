@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from "vue";
-import { useForm } from "@inertiajs/vue3";
+import { useForm, router } from "@inertiajs/vue3";
 import ChatMessage from "@/Components/ChatMessage.vue";
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js";
@@ -388,6 +388,15 @@ function adjustHeight(event) {
   textarea.style.height = `${textarea.scrollHeight}px`; // Ajustement dynamique.
 }
 
+// Ajouter la fonction de déconnexion
+const logout = () => {
+  router.post('/logout', {}, {
+    onSuccess: () => {
+      router.visit('/login');
+    }
+  });
+};
+
 </script>
 
 <template>
@@ -432,6 +441,7 @@ function adjustHeight(event) {
     <div class="flex flex-col flex-grow">
 
     <header class="bg-gray-900 p-4 flex items-center justify-between">
+      <!-- Sélecteur de modèle -->
       <select
         v-model="form.model"
         class="bg-gray-900 text-white text-sm rounded-lg px-2 py-1 border-none focus:outline-none focus:ring-0 focus:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800"
@@ -441,17 +451,31 @@ function adjustHeight(event) {
         </option>
       </select>
 
-      <!-- Ajouter le bouton des paramètres -->
-      <button
-        v-if="activeConversationId"
-        @click="showInstructionsModal = true"
-        class="text-gray-400 hover:text-white"
-      >
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      </button>
+      <!-- Actions groupées -->
+      <div class="flex items-center gap-4">
+        <!-- Bouton des paramètres -->
+        <button
+          v-if="activeConversationId"
+          @click="showInstructionsModal = true"
+          class="text-gray-400 hover:text-white"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+
+        <!-- Bouton de déconnexion -->
+        <button
+          @click="logout"
+          class="text-gray-400 hover:text-white flex items-center gap-2 text-sm"
+        >
+          <span>Déconnexion</span>
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+        </button>
+      </div>
     </header>
 
       <!-- Zone principale conditionnelle -->
